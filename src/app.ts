@@ -1,9 +1,13 @@
 import {
     Engine,
     InstancedMesh,
+    Matrix,
+    Mesh,
     MeshBuilder,
+    Nullable,
     Scene,
     StandardMaterial,
+    VertexBuffer,
     WebXRFeatureName,
     WebXRHand,
     WebXRHandTracking
@@ -96,7 +100,77 @@ import "@babylonjs/loaders";
         else if (isRightThumbTouchingForefinger) {
             isRightThumbTouchingForefinger = false;
         }
-    })
+    });
+
+    //#endregion
+
+    //#region Room setup plane processing
+    // See https://github.com/cabanier/webxr-samples-1/blob/main/proposals/plane-detection-2.html
+
+    class PlaneContext {
+        public id: number = -1;
+        public timestamp: number = -1;
+        public mesh: Mesh = MeshBuilder.CreatePlane("Room plane", { size: 1 });
+
+        public update(polygon: DOMPointReadOnly[]) {
+            const vertexBuffer = this.mesh.getVerticesData(VertexBuffer.PositionKind);
+            let j = 0;
+            for (let i = 0; i < 4; i++) {
+                vertexBuffer[j++] = polygon[i].x;
+                vertexBuffer[j++] = polygon[i].z;
+                vertexBuffer[j++] = 0;
+            }
+            this.mesh.updateVerticesData(VertexBuffer.PositionKind, vertexBuffer);
+        }
+
+        constructor(polygon) {
+            this.update(polygon);
+
+            const material = new StandardMaterial("Room plane material");
+            material.backFaceCulling = false;
+            material.emissiveColor.set(0.5, 0.05, 0.5)
+            this.mesh.material = material;
+        }
+    }
+
+    const planeMap = new Map<XRPlane, PlaneContext>();
+
+    xr.baseExperience.sessionManager.onXRFrameObservable.add((frame: XRFrame) => {
+        const referenceSpace = xr.baseExperience.sessionManager.referenceSpace;
+
+        if (frame.detectedPlanes) {
+            // Delete planes from plane map if they don't exist anymore.
+            planeMap.forEach((planeContext, plane) => {
+                if (!frame.detectedPlanes.has(plane)) {
+                    planeMap.delete(plane);
+                }
+            });
+
+            // Add new planes to plane map.
+            frame.detectedPlanes.forEach(plane => {
+                const pose = frame.getPose(plane.planeSpace, referenceSpace);
+
+                // Update existing plane if already added.
+                let planeContext: PlaneContext;
+                if (planeMap.has(plane)) {
+                    planeContext = planeMap.get(plane);
+                    planeContext.update(plane.polygon);
+                }
+                else {
+                    planeContext = new PlaneContext(plane.polygon)
+                    planeMap.set(plane, planeContext);
+                }
+
+                if (pose) {
+                    planeContext.mesh.isVisible = true;
+                    Matrix.FromArrayToRef(pose.transform.matrix, 0, planeContext.mesh.getWorldMatrix());
+                }
+                else {
+                    planeContext.mesh.isVisible = false;
+                }
+            });
+        }
+    });
 
     //#endregion
 })();
