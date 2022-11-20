@@ -226,7 +226,9 @@ import "@babylonjs/loaders";
 
                 if (pose) {
                     planeContext.mesh.isVisible = true;
-                    Matrix.FromArrayToRef(pose.transform.matrix, 0, planeContext.mesh.getWorldMatrix());
+                    const matrix = planeContext.mesh.getWorldMatrix();
+                    Matrix.FromArrayToRef(pose.transform.matrix, 0, matrix);
+                    matrix.toggleModelMatrixHandInPlace();
                 }
                 else {
                     planeContext.mesh.isVisible = false;
