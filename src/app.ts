@@ -7,7 +7,8 @@ import {
     Nullable,
     Scene,
     StandardMaterial,
-    VertexBuffer,
+    Texture as BabylonTexture,
+    VertexData,
     WebXRFeatureName,
     WebXRHand,
     WebXRHandTracking
@@ -107,29 +108,91 @@ import "@babylonjs/loaders";
     //#region Room setup plane processing
     // See https://github.com/cabanier/webxr-samples-1/blob/main/proposals/plane-detection-2.html
 
+    const planeVertexPositions = [
+        -1, 0, -1,
+        1, 0, -1,
+        1, 0, 1,
+        -1, 0, 1
+    ];
+
+    const planeVertexIndices = [
+        0, 2, 1,
+        0, 3, 2
+    ];
+
+    const planeVertexUVs = [
+        0, 1,
+        1, 1,
+        1, 0,
+        0, 0
+    ]
+
+    class Texture extends BabylonTexture {
+        public static LoadFromSvgString = (svgString: string) => {
+            // Setting a unique name is required otherwise the first texture created gets used all the time.
+            // See https://forum.babylonjs.com/t/why-does-2nd-texture-use-first-svg/23975.
+            Texture._svgTextureCount++
+            const name = Texture._svgTextureCount.toString()
+            const texture = Texture.LoadFromDataString(name, 'data:image/svg+xml;base64,' + window.btoa(svgString), Engine.LastCreatedScene!)
+            texture.onLoadObservable.addOnce(() => {
+                texture.updateSamplingMode(Texture.TRILINEAR_SAMPLINGMODE)
+            })
+            return texture
+        }
+
+        private static _svgTextureCount = 0
+    }
+
+    const gridTexture = Texture.LoadFromSvgString(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">
+            <line x1="0" y1="0" x2="64" y2="0"/>
+            <line x1="64" y1="0" x2="64" y2="64"/>
+            <line x1="64" y1="64" x2="0" y2="64"/>
+            <line x1="0" y1="64" x2="0" y2="0"/>
+            <style>
+                line {
+                    fill: none;
+                    stroke: #fff;
+                    stroke-width: 4;
+                }
+            </style>
+        </svg>
+    `);
+
+    gridTexture.uScale = gridTexture.vScale = 20;
+    const gridMaterial = new StandardMaterial("Grid material");
+    gridMaterial.ambientTexture = gridTexture;
+    gridMaterial.backFaceCulling = false;
+    gridMaterial.disableLighting = true;
+    gridMaterial.emissiveColor.set(1, 1, 1);
+    gridMaterial.opacityTexture = gridTexture;
+    gridMaterial.alpha = 0.5;
+
+    let nextPlaneId = 1;
+
     class PlaneContext {
-        public id: number = -1;
-        public timestamp: number = -1;
-        public mesh: Mesh = MeshBuilder.CreatePlane("Room plane", { size: 1 });
+        public id = -1;
+        public timestamp = -1;
+        public mesh = new Mesh("Room plane");
+        public vertexData = new VertexData();
 
         public update(polygon: DOMPointReadOnly[]) {
-            const vertexBuffer = this.mesh.getVerticesData(VertexBuffer.PositionKind);
             let j = 0;
             for (let i = 0; i < 4; i++) {
-                vertexBuffer[j++] = polygon[i].x;
-                vertexBuffer[j++] = polygon[i].z;
-                vertexBuffer[j++] = 0;
+                this.vertexData.positions[j++] = polygon[i].x;
+                this.vertexData.positions[j++] = 0;
+                this.vertexData.positions[j++] = polygon[i].z;
             }
-            this.mesh.updateVerticesData(VertexBuffer.PositionKind, vertexBuffer);
+            this.vertexData.applyToMesh(this.mesh);
         }
 
         constructor(polygon) {
+            this.id = nextPlaneId++;
+            this.mesh.material = gridMaterial;
+            this.vertexData.positions = planeVertexPositions;
+            this.vertexData.indices = planeVertexIndices;
+            this.vertexData.uvs = planeVertexUVs;
             this.update(polygon);
-
-            const material = new StandardMaterial("Room plane material");
-            material.backFaceCulling = false;
-            material.emissiveColor.set(0.5, 0.05, 0.5)
-            this.mesh.material = material;
         }
     }
 
