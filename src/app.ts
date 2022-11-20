@@ -41,7 +41,7 @@ import "@babylonjs/loaders";
     const xr = await scene.createDefaultXRExperienceAsync({
         uiOptions: {
             sessionMode: "immersive-ar",
-            referenceSpaceType: "local-floor"
+            referenceSpaceType: "local"
         },
         optionalFeatures: [ "plane-detection" ]
     });
