@@ -40,6 +40,9 @@ import earcut from "earcut";
 
     // Setup AR.
     const xr = await scene.createDefaultXRExperienceAsync({
+        inputOptions: {
+            doNotLoadControllerMeshes: true
+        },
         uiOptions: {
             sessionMode: "immersive-ar",
             referenceSpaceType: "local-floor"
