@@ -56,7 +56,7 @@ import earcut from "earcut";
     // See https://playground.babylonjs.com/#98TM63.
 
     const xrFeaturesManager = xr.baseExperience.featuresManager;
-    const xrPlanesFeature = <WebXRPlaneDetector>xrFeaturesManager.enableFeature(WebXRPlaneDetector.Name, "latest");
+    const xrPlaneDetectorFeature = <WebXRPlaneDetector>xrFeaturesManager.enableFeature(WebXRPlaneDetector.Name, "latest");
 
     class PlaneContext {
         public xrPlane: IWebXRPlane = null;
@@ -65,7 +65,7 @@ import earcut from "earcut";
 
     const planeMap = new Map<IWebXRPlane, PlaneContext>();
 
-    xrPlanesFeature.onPlaneAddedObservable.add(plane => {
+    xrPlaneDetectorFeature.onPlaneAddedObservable.add(plane => {
         const planeContext = new PlaneContext;
         planeContext.xrPlane = plane;
 
@@ -86,7 +86,7 @@ import earcut from "earcut";
         plane.transformationMatrix.decompose(mesh.scaling, mesh.rotationQuaternion, mesh.position);
     });
 
-    xrPlanesFeature.onPlaneUpdatedObservable.add(plane => {
+    xrPlaneDetectorFeature.onPlaneUpdatedObservable.add(plane => {
         let material: Material = null;
         let planeContext: PlaneContext = null;
 
@@ -118,7 +118,7 @@ import earcut from "earcut";
         plane.transformationMatrix.decompose(mesh.scaling, mesh.rotationQuaternion, mesh.position);
     })
 
-    xrPlanesFeature.onPlaneRemovedObservable.add(plane => {
+    xrPlaneDetectorFeature.onPlaneRemovedObservable.add(plane => {
         if (plane && planeMap.has(plane)) {
             planeMap.get(plane).mesh.dispose();
         }
