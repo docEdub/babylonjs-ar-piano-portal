@@ -5,6 +5,8 @@ import {
     Material,
     Matrix,
     Mesh,
+    MeshBuilder,
+    PointerEventTypes,
     PolygonMeshBuilder,
     Quaternion,
     Scene,
@@ -129,6 +131,40 @@ import earcut from "earcut";
             planeContext.mesh.dispose();
         });
         planeMap.clear();
+    });
+
+    //#endregion
+
+    //#region Pointer processing
+
+    const framePlaneMesh = MeshBuilder.CreatePlane("FramePlane.mesh", { size: 10 });
+    const framePlaneMaterial = new StandardMaterial("FramePlane.material");
+    framePlaneMaterial.alpha = 0.5;
+    framePlaneMaterial.emissiveColor.set(1, 0, 0);
+    framePlaneMesh.material = framePlaneMaterial;
+    framePlaneMesh.rotation.x = -Math.PI / 2;
+    framePlaneMesh.scaling.setAll(0.1);
+    framePlaneMesh.bakeCurrentTransformIntoVertices();
+
+    scene.onPointerObservable.add((pointerInfo) => {
+        switch (pointerInfo.type) {
+            case PointerEventTypes.POINTERDOWN:
+                console.debug(`Pointer down ...`);
+                console.debug(pointerInfo.pickInfo);
+                framePlaneMesh.position.copyFrom(pointerInfo.pickInfo.pickedPoint);
+                if (pointerInfo.pickInfo.pickedMesh.rotationQuaternion) {
+                    if (!framePlaneMesh.rotationQuaternion) {
+                        framePlaneMesh.rotationQuaternion = pointerInfo.pickInfo.pickedMesh.rotationQuaternion.clone();
+                    }
+                    else {
+                        framePlaneMesh.rotationQuaternion.copyFrom(pointerInfo.pickInfo.pickedMesh.rotationQuaternion);
+                    }
+                }
+                else {
+                    framePlaneMesh.rotation.copyFrom(pointerInfo.pickInfo.pickedMesh.rotation);
+                }
+                break;
+        }
     });
 
     //#endregion
