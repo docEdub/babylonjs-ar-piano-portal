@@ -1,4 +1,5 @@
 import {
+    AbstractMesh,
     Color3,
     Engine,
     IWebXRPlane,
@@ -61,24 +62,28 @@ import earcut from "earcut";
     const xrPlaneDetectorFeature = <WebXRPlaneDetector>xrFeaturesManager.enableFeature(WebXRPlaneDetector.Name, "latest");
 
     class PlaneContext {
-        public xrPlane: IWebXRPlane = null;
+        public xrPlaneInterface: IWebXRPlane = null;
         public mesh: Mesh = null;
     }
 
-    const planeMap = new Map<IWebXRPlane, PlaneContext>();
+    const xrPlaneMap = new Map<IWebXRPlane, PlaneContext>();
+    const planeMeshMap = new Map<AbstractMesh, PlaneContext>();
 
     xrPlaneDetectorFeature.onPlaneAddedObservable.add(plane => {
+        console.debug(plane);
+
         const planeContext = new PlaneContext;
-        planeContext.xrPlane = plane;
+        planeContext.xrPlaneInterface = plane;
 
         plane.polygonDefinition.push(plane.polygonDefinition[0]);
-        const polygon_triangulation = new PolygonMeshBuilder("Plane.mesh", plane.polygonDefinition.map((p) => new Vector2(p.x, p.z)), scene, earcut);
+        const polygon_triangulation = new PolygonMeshBuilder("Wall", plane.polygonDefinition.map((p) => new Vector2(p.x, p.z)), scene, earcut);
         const mesh = polygon_triangulation.build(false, 0.01);
         planeContext.mesh = mesh;
 
-        planeMap.set(plane, planeContext);
+        xrPlaneMap.set(plane, planeContext);
+        planeMeshMap.set(mesh, planeContext);
 
-        const material = new StandardMaterial("Plane.material", scene);
+        const material = new StandardMaterial("Wall.material", scene);
         material.alpha = 0.5;
         material.emissiveColor = Color3.Random();
         mesh.createNormals(false);
@@ -92,11 +97,12 @@ import earcut from "earcut";
         let material: Material = null;
         let planeContext: PlaneContext = null;
 
-        if (planeMap.has(plane)) {
-            planeContext = planeMap.get(plane);
+        if (xrPlaneMap.has(plane)) {
+            planeContext = xrPlaneMap.get(plane);
 
             // Keep the material, dispose the old polygon.
             material = planeContext.mesh.material;
+            planeMeshMap.delete(planeContext.mesh);
             planeContext.mesh.dispose(false, false);
         }
 
@@ -106,13 +112,15 @@ import earcut from "earcut";
 
         if (!planeContext) {
             planeContext = new PlaneContext;
-            planeContext.xrPlane = plane;
+            planeContext.xrPlaneInterface = plane;
         }
 
         plane.polygonDefinition.push(plane.polygonDefinition[0]);
-        const polygon_triangulation = new PolygonMeshBuilder("name", plane.polygonDefinition.map((p) => new Vector2(p.x, p.z)), scene, earcut);
+        const polygon_triangulation = new PolygonMeshBuilder("Wall", plane.polygonDefinition.map((p) => new Vector2(p.x, p.z)), scene, earcut);
         const mesh = polygon_triangulation.build(false, 0.01);
         planeContext.mesh = mesh;
+
+        planeMeshMap.set(mesh, planeContext);
 
         mesh.createNormals(false);
         mesh.material = material;
@@ -121,24 +129,25 @@ import earcut from "earcut";
     })
 
     xrPlaneDetectorFeature.onPlaneRemovedObservable.add(plane => {
-        if (plane && planeMap.has(plane)) {
-            planeMap.get(plane).mesh.dispose();
+        if (plane && xrPlaneMap.has(plane)) {
+            xrPlaneMap.get(plane).mesh.dispose();
         }
     })
 
     xr.baseExperience.sessionManager.onXRSessionInit.add(() => {
-        planeMap.forEach(planeContext => {
+        xrPlaneMap.forEach(planeContext => {
             planeContext.mesh.dispose();
         });
-        planeMap.clear();
+        xrPlaneMap.clear();
+        planeMeshMap.clear();
     });
 
     //#endregion
 
     //#region Pointer processing
 
-    const framePlaneMesh = MeshBuilder.CreatePlane("FramePlane.mesh", { size: 10 });
-    const framePlaneMaterial = new StandardMaterial("FramePlane.material");
+    const framePlaneMesh = MeshBuilder.CreatePlane("Frame", { size: 10 });
+    const framePlaneMaterial = new StandardMaterial("Frame.material");
     framePlaneMaterial.alpha = 0.5;
     framePlaneMaterial.emissiveColor.set(1, 0, 0);
     framePlaneMesh.material = framePlaneMaterial;
@@ -149,19 +158,30 @@ import earcut from "earcut";
     scene.onPointerObservable.add((pointerInfo) => {
         switch (pointerInfo.type) {
             case PointerEventTypes.POINTERDOWN:
-                console.debug(`Pointer down ...`);
-                console.debug(pointerInfo.pickInfo);
+                const pickedMesh = pointerInfo.pickInfo.pickedMesh;
+                if (!planeMeshMap.has(pickedMesh)) {
+                    console.debug(`Picked plane mesh not found in planeMeshMap.`);
+                    return;
+                }
+                const planeContext = planeMeshMap.get(pickedMesh);
+                if ("vertical" !== planeContext.xrPlaneInterface.xrPlane.orientation.toLowerCase()) {
+                    console.debug(`Plane orientation is not vertical. Orientation = ${planeContext.xrPlaneInterface.xrPlane.orientation.toLowerCase()}.`);
+                    return;
+                }
+
+                // TODO: Add logic to keep frame from overlapping with floor, ceiling or another wall.
+
                 framePlaneMesh.position.copyFrom(pointerInfo.pickInfo.pickedPoint);
-                if (pointerInfo.pickInfo.pickedMesh.rotationQuaternion) {
+                if (pickedMesh.rotationQuaternion) {
                     if (!framePlaneMesh.rotationQuaternion) {
-                        framePlaneMesh.rotationQuaternion = pointerInfo.pickInfo.pickedMesh.rotationQuaternion.clone();
+                        framePlaneMesh.rotationQuaternion = pickedMesh.rotationQuaternion.clone();
                     }
                     else {
-                        framePlaneMesh.rotationQuaternion.copyFrom(pointerInfo.pickInfo.pickedMesh.rotationQuaternion);
+                        framePlaneMesh.rotationQuaternion.copyFrom(pickedMesh.rotationQuaternion);
                     }
                 }
                 else {
-                    framePlaneMesh.rotation.copyFrom(pointerInfo.pickInfo.pickedMesh.rotation);
+                    framePlaneMesh.rotation.copyFrom(pickedMesh.rotation);
                 }
                 break;
         }
