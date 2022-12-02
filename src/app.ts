@@ -12,6 +12,7 @@ import {
     Quaternion,
     Scene,
     StandardMaterial,
+    TransformNode,
     Vector2,
     Vector3,
     WebXRPlaneDetector
@@ -70,14 +71,13 @@ import earcut from "earcut";
     const planeMeshMap = new Map<AbstractMesh, PlaneContext>();
 
     xrPlaneDetectorFeature.onPlaneAddedObservable.add(plane => {
-        console.debug(plane);
-
         const planeContext = new PlaneContext;
         planeContext.xrPlaneInterface = plane;
 
         plane.polygonDefinition.push(plane.polygonDefinition[0]);
         const polygon_triangulation = new PolygonMeshBuilder("Wall", plane.polygonDefinition.map((p) => new Vector2(p.x, p.z)), scene, earcut);
         const mesh = polygon_triangulation.build(false, 0.01);
+        mesh.renderingGroupId = 0;
         planeContext.mesh = mesh;
 
         xrPlaneMap.set(plane, planeContext);
@@ -118,6 +118,7 @@ import earcut from "earcut";
         plane.polygonDefinition.push(plane.polygonDefinition[0]);
         const polygon_triangulation = new PolygonMeshBuilder("Wall", plane.polygonDefinition.map((p) => new Vector2(p.x, p.z)), scene, earcut);
         const mesh = polygon_triangulation.build(false, 0.01);
+        mesh.renderingGroupId = 0;
         planeContext.mesh = mesh;
 
         planeMeshMap.set(mesh, planeContext);
@@ -144,16 +145,72 @@ import earcut from "earcut";
 
     //#endregion
 
-    //#region Pointer processing
+    //#region Magic portal
 
-    const framePlaneMesh = MeshBuilder.CreatePlane("Frame", { size: 10 });
-    const framePlaneMaterial = new StandardMaterial("Frame.material");
-    framePlaneMaterial.alpha = 0.5;
-    framePlaneMaterial.emissiveColor.set(1, 0, 0);
-    framePlaneMesh.material = framePlaneMaterial;
+    const frameTransform = new TransformNode("Frame.transform");
+    frameTransform.scaling.setAll(0);
+
+    const framePlaneMesh = MeshBuilder.CreatePlane("Frame");
     framePlaneMesh.rotation.x = -Math.PI / 2;
-    framePlaneMesh.scaling.setAll(0.1);
     framePlaneMesh.bakeCurrentTransformIntoVertices();
+    framePlaneMesh.isPickable = false;
+    framePlaneMesh.parent = frameTransform;
+
+    const boxPlanes = new Array<Mesh>(4);
+    boxPlanes[0] = MeshBuilder.CreatePlane(".boxplane");
+    boxPlanes[0].position.x = -0.5;
+    boxPlanes[0].position.y = 0.5;
+    boxPlanes[0].rotation.y = -Math.PI / 2
+    for (let i = 1; i < 4; i++) {
+        boxPlanes[i] = boxPlanes[0].clone();
+        boxPlanes[i].rotateAround(Vector3.ZeroReadOnly, Vector3.UpReadOnly, i * Math.PI / 2);
+    }
+
+    const innerTube = Mesh.MergeMeshes(boxPlanes);
+    innerTube.name = "InnerTube";
+    innerTube.scaling.set(1, 100, 1);
+    innerTube.bakeCurrentTransformIntoVertices();
+    innerTube.isPickable = false;
+    innerTube.parent = frameTransform;
+    const innerTubeMaterial = new StandardMaterial("InnerTube.material");
+    innerTubeMaterial.alpha = 0.5;
+    innerTubeMaterial.emissiveColor.set(1, 0, 0);
+    innerTube.material = innerTubeMaterial;
+
+    const cylinder = MeshBuilder.CreateCylinder(".cylinder");
+    cylinder.position.y = 50;
+    cylinder.scaling.set(0.25, cylinder.position.y, 0.25);
+    cylinder.bakeCurrentTransformIntoVertices();
+    cylinder.isPickable = false;
+    cylinder.parent = frameTransform;
+    const cylinderMaterial = new StandardMaterial(".cylinder.material");
+    cylinderMaterial.alpha = 0.5;
+    cylinderMaterial.emissiveColor.set(1, 0, 1);
+    cylinder.material = cylinderMaterial;
+
+    // Use `framePlaneMesh` as a stencil so nothing gets drawn outside of it.
+    // This creates the magic portal effect.
+    framePlaneMesh.renderingGroupId = 1;
+    innerTube.renderingGroupId = 2;
+    cylinder.renderingGroupId = 2;
+    scene.setRenderingAutoClearDepthStencil(2, false);
+    engine.setStencilBuffer(true);
+    scene.onBeforeRenderingGroupObservable.add((groupInfo) => {
+        switch (groupInfo.renderingGroupId) {
+            case 2:
+                engine.setDepthFunction(Engine.ALWAYS);
+                engine.setStencilFunction(Engine.EQUAL);
+                break;
+            default:
+                engine.setDepthFunction(Engine.LESS);
+                engine.setStencilFunction(Engine.ALWAYS);
+                break;
+        }
+    });
+
+    //#endregion
+
+    //#region Pointer processing
 
     scene.onPointerObservable.add((pointerInfo) => {
         switch (pointerInfo.type) {
@@ -171,17 +228,18 @@ import earcut from "earcut";
 
                 // TODO: Add logic to keep frame from overlapping with floor, ceiling or another wall.
 
-                framePlaneMesh.position.copyFrom(pointerInfo.pickInfo.pickedPoint);
+                frameTransform.scaling.setAll(1);
+                frameTransform.position.copyFrom(pointerInfo.pickInfo.pickedPoint);
                 if (pickedMesh.rotationQuaternion) {
-                    if (!framePlaneMesh.rotationQuaternion) {
-                        framePlaneMesh.rotationQuaternion = pickedMesh.rotationQuaternion.clone();
+                    if (!frameTransform.rotationQuaternion) {
+                        frameTransform.rotationQuaternion = pickedMesh.rotationQuaternion.clone();
                     }
                     else {
-                        framePlaneMesh.rotationQuaternion.copyFrom(pickedMesh.rotationQuaternion);
+                        frameTransform.rotationQuaternion.copyFrom(pickedMesh.rotationQuaternion);
                     }
                 }
                 else {
-                    framePlaneMesh.rotation.copyFrom(pickedMesh.rotation);
+                    frameTransform.rotation.copyFrom(pickedMesh.rotation);
                 }
                 break;
         }
