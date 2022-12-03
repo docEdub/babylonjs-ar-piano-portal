@@ -1,5 +1,4 @@
 import {
-    // AbstractMesh,
     Color3,
     HemisphericLight,
     Mesh,
@@ -9,8 +8,10 @@ import {
     Vector3,
 } from "@babylonjs/core";
 
-export class PianoKeys {
+export class PianoKeys extends TransformNode {
     constructor() {
+        super(`PianoKeys`);
+
         const keyTopGap = 20
         const keyOffsetX = 52.8 + keyTopGap / 2;
         const keyRadius = 24 //19.862536897868538;
@@ -49,6 +50,8 @@ export class PianoKeys {
                 key.rotateAround(Vector3.ZeroReadOnly, Vector3.LeftHandedForwardReadOnly, keyAngle(keyX));
                 key.name = props.note + props.register;
                 key.parent = parent;
+                key.renderingGroupId = 2;
+                key.isPickable = false;
 
                 return key;
             }
@@ -73,6 +76,8 @@ export class PianoKeys {
                 key.rotateAround(Vector3.ZeroReadOnly, Vector3.LeftHandedForwardReadOnly, keyAngle(keyX));
                 key.material = blackMat;
                 key.parent = parent;
+                key.renderingGroupId = 2;
+                key.isPickable = false;
 
                 return key;
             }
@@ -93,25 +98,27 @@ export class PianoKeys {
             {type: "white", note: "B", topWidth: 1.3, bottomWidth: 2.4, topPositionX: 0.55, wholePositionX: 0},
         ]
 
-        // Transform Node that acts as the parent of all piano keys
-        const keyboard = new TransformNode("keyboard");
-
         // Register 1 through 7
         var referencePositionX = -2.4*14;
         for (let register = 1; register <= 7; register++) {
             keyParams.forEach(key => {
-                buildKey(keyboard, Object.assign({register: register, referencePositionX: referencePositionX}, key));
+                buildKey(this, Object.assign({register: register, referencePositionX: referencePositionX}, key));
             })
             referencePositionX += 2.4*7;
         }
 
         // Register 0
-        buildKey(keyboard, {type: "white", note: "A", topWidth: 1.9, bottomWidth: 2.3, topPositionX: -0.20, wholePositionX: -2.4, register: 0, referencePositionX: -2.4*21});
+        buildKey(this, {type: "white", note: "A", topWidth: 1.9, bottomWidth: 2.3, topPositionX: -0.20, wholePositionX: -2.4, register: 0, referencePositionX: -2.4*21});
         keyParams.slice(10, 12).forEach(key => {
-            buildKey(keyboard, Object.assign({register: 0, referencePositionX: -2.4*21}, key));
+            buildKey(this, Object.assign({register: 0, referencePositionX: -2.4*21}, key));
         })
 
         // Register 8
-        buildKey(keyboard, {type: "white", note: "C", topWidth: 2.3, bottomWidth: 2.3, topPositionX: 0, wholePositionX: -2.4*6, register: 8, referencePositionX: 84});
+        buildKey(this, {type: "white", note: "C", topWidth: 2.3, bottomWidth: 2.3, topPositionX: 0, wholePositionX: -2.4*6, register: 8, referencePositionX: 84});
+
+        this.rotateAround(Vector3.ZeroReadOnly, Vector3.RightReadOnly, -Math.PI / 2);
+        this.rotateAround(Vector3.ZeroReadOnly, Vector3.UpReadOnly, Math.PI / 2);
+        this.scaling.setAll(0.025);
+        this.position.y += 0.2;
     }
 }

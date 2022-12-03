@@ -83,7 +83,7 @@ import { PianoKeys } from "./pianoKeys"
     //#endregion
 
     if (!useWebXR) {
-        const camera = new FreeCamera(`camera`, new Vector3(10, 2, 0));
+        const camera = new FreeCamera(`camera`, new Vector3(0, 2, 10));
         camera.setTarget(new Vector3(0, 2, 0));
         camera.attachControl();
         const light = new HemisphericLight(`light`, new Vector3(0, 1, 0), scene);
@@ -226,52 +226,35 @@ import { PianoKeys } from "./pianoKeys"
     const framePlaneMesh = MeshBuilder.CreatePlane("Frame");
     framePlaneMesh.rotation.x = -Math.PI / 2;
     framePlaneMesh.bakeCurrentTransformIntoVertices();
+    framePlaneMesh.scaling.setAll(1.5);
     framePlaneMesh.isPickable = false;
     framePlaneMesh.parent = frameTransform;
+    const framePlaneMaterial = new StandardMaterial(`Frame.material`);
+    framePlaneMaterial.disableDepthWrite = true;
+    framePlaneMesh.material = framePlaneMaterial;
 
-    const boxPlanes = new Array<Mesh>(4);
-    boxPlanes[0] = MeshBuilder.CreatePlane(".boxplane");
-    boxPlanes[0].position.x = -0.5;
-    boxPlanes[0].position.y = 0.5;
-    boxPlanes[0].rotation.y = -Math.PI / 2
-    for (let i = 1; i < 4; i++) {
-        boxPlanes[i] = boxPlanes[0].clone();
-        boxPlanes[i].rotateAround(Vector3.ZeroReadOnly, Vector3.UpReadOnly, i * Math.PI / 2);
-    }
-
-    const innerTube = Mesh.MergeMeshes(boxPlanes);
-    innerTube.name = "InnerTube";
-    innerTube.scaling.set(1, 100, 1);
-    innerTube.bakeCurrentTransformIntoVertices();
-    innerTube.isPickable = false;
-    innerTube.parent = frameTransform;
-    const innerTubeMaterial = new StandardMaterial("InnerTube.material");
-    innerTubeMaterial.alpha = 0.5;
-    innerTubeMaterial.emissiveColor.set(1, 0, 0);
-    innerTube.material = innerTubeMaterial;
-
-    const cylinder = MeshBuilder.CreateCylinder(".cylinder");
-    cylinder.position.y = 50;
-    cylinder.scaling.set(0.25, cylinder.position.y, 0.25);
-    cylinder.bakeCurrentTransformIntoVertices();
-    cylinder.isPickable = false;
-    cylinder.parent = frameTransform;
-    const cylinderMaterial = new StandardMaterial(".cylinder.material");
-    cylinderMaterial.alpha = 0.5;
-    cylinderMaterial.emissiveColor.set(1, 0, 1);
-    cylinder.material = cylinderMaterial;
+    // const cylinder = MeshBuilder.CreateCylinder(".cylinder");
+    // cylinder.position.y = 50;
+    // cylinder.scaling.set(0.25, cylinder.position.y, 0.25);
+    // cylinder.bakeCurrentTransformIntoVertices();
+    // cylinder.scaling.setAll(1.5);
+    // cylinder.isPickable = false;
+    // cylinder.parent = frameTransform;
+    // const cylinderMaterial = new StandardMaterial(".cylinder.material");
+    // cylinderMaterial.alpha = 0.5;
+    // cylinderMaterial.emissiveColor.set(1, 0, 1);
+    // cylinder.material = cylinderMaterial;
 
     // Use `framePlaneMesh` as a stencil so nothing gets drawn outside of it.
     // This creates the magic portal effect.
     framePlaneMesh.renderingGroupId = 1;
-    innerTube.renderingGroupId = 2;
-    cylinder.renderingGroupId = 2;
+    // cylinder.renderingGroupId = 2;
     scene.setRenderingAutoClearDepthStencil(2, false);
     engine.setStencilBuffer(true);
     scene.onBeforeRenderingGroupObservable.add((groupInfo) => {
         switch (groupInfo.renderingGroupId) {
             case 2:
-                engine.setDepthFunction(Engine.ALWAYS);
+                engine.setDepthFunction(Engine.LESS);
                 engine.setStencilFunction(Engine.EQUAL);
                 break;
             default:
@@ -324,4 +307,5 @@ import { PianoKeys } from "./pianoKeys"
     //#endregion
 
     const pianoKeys = new PianoKeys;
+    pianoKeys.parent = frameTransform;
 })();
