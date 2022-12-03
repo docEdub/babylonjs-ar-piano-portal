@@ -25,6 +25,7 @@ import {
 
 import "@babylonjs/loaders";
 import earcut from "earcut";
+import { PianoKeys } from "./pianoKeys"
 
 (async () => {
     //#region Setup engine and scene
@@ -321,4 +322,6 @@ import earcut from "earcut";
     });
 
     //#endregion
+
+    const pianoKeys = new PianoKeys;
 })();
