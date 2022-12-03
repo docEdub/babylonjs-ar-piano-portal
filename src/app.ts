@@ -82,6 +82,7 @@ import { PianoKeys } from "./pianoKeys"
 
     //#endregion
 
+    // TODO: See if light estimation can work for WebXR experience instead using the stock hemispheric light.
     const light = new HemisphericLight(`light`, new Vector3(0, 1, 0), scene);
     light.intensity = 0.7;
 
