@@ -9,8 +9,8 @@
             "request": "launch",
             "type": "chrome",
             "runtimeArgs": [
-                // "--auto-open-devtools-for-tabs",
-                "-incognito"
+                "--auto-open-devtools-for-tabs"
+                // "-incognito"
             ],
             "url": "https://localhost:8080",
             "webRoot": "${workspaceFolder}/dist",

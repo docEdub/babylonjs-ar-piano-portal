@@ -2,6 +2,8 @@ import {
     AbstractMesh,
     Color3,
     Engine,
+    FreeCamera,
+    HemisphericLight,
     IWebXRPlane,
     Material,
     Matrix,
@@ -15,7 +17,10 @@ import {
     TransformNode,
     Vector2,
     Vector3,
-    WebXRPlaneDetector
+    WebXRDefaultExperience,
+    WebXRFeaturesManager,
+    WebXRPlaneDetector,
+    WebXRSessionManager
 } from "@babylonjs/core";
 
 import "@babylonjs/loaders";
@@ -40,108 +45,175 @@ import earcut from "earcut";
 
     //#endregion
 
-    //#region Setup WebXR AR
+    //#region Setup WebXR
 
-    // Setup AR.
-    const xr = await scene.createDefaultXRExperienceAsync({
-        inputOptions: {
-            doNotLoadControllerMeshes: true
-        },
-        uiOptions: {
-            sessionMode: "immersive-ar",
-            referenceSpaceType: "local-floor"
-        },
-        optionalFeatures: true
-    });
+    let useWebXR = true;
+
+    if (!await WebXRSessionManager.IsSessionSupportedAsync("immersive-ar")) {
+        console.log("Session mode \"immersive-ar\" not available.");
+        useWebXR = false;
+    }
+
+    const xrAvailableFeatures = WebXRFeaturesManager.GetAvailableFeatures();
+    if (xrAvailableFeatures.indexOf(WebXRPlaneDetector.Name) === -1) {
+        console.log(`${WebXRPlaneDetector.Name} not available.`);
+        useWebXR = false;
+    }
+
+    let xr: WebXRDefaultExperience = null;
+    if (useWebXR) {
+        xr = await scene.createDefaultXRExperienceAsync({
+            inputOptions: {
+                doNotLoadControllerMeshes: true
+            },
+            uiOptions: {
+                sessionMode: "immersive-ar",
+                referenceSpaceType: "local-floor"
+            },
+            optionalFeatures: true
+        });
+    }
+
+    if (useWebXR && !xr.baseExperience) {
+        console.log("WebXR not available.");
+        useWebXR = false;
+    }
 
     //#endregion
+
+    if (!useWebXR) {
+        const camera = new FreeCamera(`camera`, new Vector3(10, 2, 0));
+        camera.setTarget(new Vector3(0, 2, 0));
+        camera.attachControl();
+        const light = new HemisphericLight(`light`, new Vector3(0, 1, 0), scene);
+        light.intensity = 0.7;
+        const ground = MeshBuilder.CreateGround(`ground`, {width: 20, height: 20});
+        ground.isPickable = false;
+
+        camera.keysUpward.push(69); // E
+        camera.keysDownward.push(81); // Q
+        camera.keysUp.push(87); // W
+        camera.keysLeft.push(65); // A
+        camera.keysDown.push(83); // S
+        camera.keysRight.push(68); // D
+    }
 
     //#region Room setup plane processing
     // See https://playground.babylonjs.com/#98TM63.
 
-    const xrFeaturesManager = xr.baseExperience.featuresManager;
-    const xrPlaneDetectorFeature = <WebXRPlaneDetector>xrFeaturesManager.enableFeature(WebXRPlaneDetector.Name, "latest");
-
     class PlaneContext {
-        public xrPlaneInterface: IWebXRPlane = null;
         public mesh: Mesh = null;
+        public isVertical = false;
     }
 
-    const xrPlaneMap = new Map<IWebXRPlane, PlaneContext>();
     const planeMeshMap = new Map<AbstractMesh, PlaneContext>();
 
-    xrPlaneDetectorFeature.onPlaneAddedObservable.add(plane => {
-        const planeContext = new PlaneContext;
-        planeContext.xrPlaneInterface = plane;
+    if (useWebXR) {
+        const xrPlaneMap = new Map<IWebXRPlane, PlaneContext>();
 
-        plane.polygonDefinition.push(plane.polygonDefinition[0]);
-        const polygon_triangulation = new PolygonMeshBuilder("Wall", plane.polygonDefinition.map((p) => new Vector2(p.x, p.z)), scene, earcut);
-        const mesh = polygon_triangulation.build(false, 0.01);
-        mesh.renderingGroupId = 0;
-        planeContext.mesh = mesh;
+        const xrFeaturesManager = xr.baseExperience.featuresManager;
+        const xrPlaneDetectorFeature = <WebXRPlaneDetector>xrFeaturesManager.enableFeature(WebXRPlaneDetector.Name, "latest");
+        xrPlaneDetectorFeature.onPlaneAddedObservable.add(plane => {
+            const planeContext = new PlaneContext;
+            planeContext.isVertical = plane.xrPlane.orientation.toLocaleLowerCase() === "vertical";
 
-        xrPlaneMap.set(plane, planeContext);
-        planeMeshMap.set(mesh, planeContext);
+            plane.polygonDefinition.push(plane.polygonDefinition[0]);
+            const polygon_triangulation = new PolygonMeshBuilder("Wall", plane.polygonDefinition.map((p) => new Vector2(p.x, p.z)), scene, earcut);
+            const mesh = polygon_triangulation.build(false, 0.01);
+            mesh.renderingGroupId = 0;
+            planeContext.mesh = mesh;
 
-        const material = new StandardMaterial("Wall.material", scene);
-        material.alpha = 0.5;
-        material.emissiveColor = Color3.Random();
-        mesh.createNormals(false);
-        mesh.material = material;
+            xrPlaneMap.set(plane, planeContext);
+            planeMeshMap.set(mesh, planeContext);
 
-        mesh.rotationQuaternion = new Quaternion();
-        plane.transformationMatrix.decompose(mesh.scaling, mesh.rotationQuaternion, mesh.position);
-    });
+            const material = new StandardMaterial("Wall.material", scene);
+            material.alpha = 0.5;
+            material.emissiveColor = Color3.Random();
+            mesh.createNormals(false);
+            mesh.material = material;
 
-    xrPlaneDetectorFeature.onPlaneUpdatedObservable.add(plane => {
-        let material: Material = null;
-        let planeContext: PlaneContext = null;
-
-        if (xrPlaneMap.has(plane)) {
-            planeContext = xrPlaneMap.get(plane);
-
-            // Keep the material, dispose the old polygon.
-            material = planeContext.mesh.material;
-            planeMeshMap.delete(planeContext.mesh);
-            planeContext.mesh.dispose(false, false);
-        }
-
-        if (plane.polygonDefinition.some(p => !p)) {
-            return;
-        }
-
-        if (!planeContext) {
-            planeContext = new PlaneContext;
-            planeContext.xrPlaneInterface = plane;
-        }
-
-        plane.polygonDefinition.push(plane.polygonDefinition[0]);
-        const polygon_triangulation = new PolygonMeshBuilder("Wall", plane.polygonDefinition.map((p) => new Vector2(p.x, p.z)), scene, earcut);
-        const mesh = polygon_triangulation.build(false, 0.01);
-        mesh.renderingGroupId = 0;
-        planeContext.mesh = mesh;
-
-        planeMeshMap.set(mesh, planeContext);
-
-        mesh.createNormals(false);
-        mesh.material = material;
-        mesh.rotationQuaternion = new Quaternion();
-        plane.transformationMatrix.decompose(mesh.scaling, mesh.rotationQuaternion, mesh.position);
-    })
-
-    xrPlaneDetectorFeature.onPlaneRemovedObservable.add(plane => {
-        if (plane && xrPlaneMap.has(plane)) {
-            xrPlaneMap.get(plane).mesh.dispose();
-        }
-    })
-
-    xr.baseExperience.sessionManager.onXRSessionInit.add(() => {
-        xrPlaneMap.forEach(planeContext => {
-            planeContext.mesh.dispose();
+            mesh.rotationQuaternion = new Quaternion();
+            plane.transformationMatrix.decompose(mesh.scaling, mesh.rotationQuaternion, mesh.position);
         });
-        xrPlaneMap.clear();
-        planeMeshMap.clear();
-    });
+
+        xrPlaneDetectorFeature.onPlaneUpdatedObservable.add(plane => {
+            let material: Material = null;
+            let planeContext: PlaneContext = null;
+
+            if (xrPlaneMap.has(plane)) {
+                planeContext = xrPlaneMap.get(plane);
+
+                // Keep the material, dispose the old polygon.
+                material = planeContext.mesh.material;
+                planeMeshMap.delete(planeContext.mesh);
+                planeContext.mesh.dispose(false, false);
+            }
+
+            if (plane.polygonDefinition.some(p => !p)) {
+                return;
+            }
+
+            if (!planeContext) {
+                planeContext = new PlaneContext;
+                planeContext.isVertical = plane.xrPlane.orientation.toLocaleLowerCase() === "vertical";
+            }
+
+            plane.polygonDefinition.push(plane.polygonDefinition[0]);
+            const polygon_triangulation = new PolygonMeshBuilder("Wall", plane.polygonDefinition.map((p) => new Vector2(p.x, p.z)), scene, earcut);
+            const mesh = polygon_triangulation.build(false, 0.01);
+            mesh.renderingGroupId = 0;
+            planeContext.mesh = mesh;
+
+            planeMeshMap.set(mesh, planeContext);
+
+            mesh.createNormals(false);
+            mesh.material = material;
+            mesh.rotationQuaternion = new Quaternion();
+            plane.transformationMatrix.decompose(mesh.scaling, mesh.rotationQuaternion, mesh.position);
+        })
+
+        xrPlaneDetectorFeature.onPlaneRemovedObservable.add(plane => {
+            if (plane && xrPlaneMap.has(plane)) {
+                xrPlaneMap.get(plane).mesh.dispose();
+            }
+        })
+
+        xr.baseExperience.sessionManager.onXRSessionInit.add(() => {
+            xrPlaneMap.forEach(planeContext => {
+                planeContext.mesh.dispose();
+            });
+            xrPlaneMap.clear();
+            planeMeshMap.clear();
+        });
+    }
+    else { // useWebXR == false
+        const wallMaterial = new StandardMaterial(`Wall.material`);
+        wallMaterial.diffuseColor.set(0.75, 0.75, 0.75);
+
+        for (let i = 0; i < 4; i++) {
+            // Create simulated wall with final rotation y and z matching detected wall planes so the correct xfrom is
+            // used when placing the frame.
+            const wall = MeshBuilder.CreatePlane(`Wall`);
+            wall.rotation.z = Math.PI / 2;
+            wall.rotation.y = Math.PI / 2;
+            wall.rotation.x = -Math.PI / 2;
+            wall.bakeCurrentTransformIntoVertices();
+            wall.rotation.z = -Math.PI / 2;
+            wall.rotation.y = -Math.PI / 2;
+            wall.position.y = 2;
+            wall.position.z = 10;
+            wall.scaling.y = wall.scaling.z = 2 * wall.position.z;
+            wall.scaling.x = 2 * wall.position.y;
+            wall.rotateAround(Vector3.ZeroReadOnly, Vector3.UpReadOnly, Math.PI / 2 * i);
+            wall.renderingGroupId = 0;
+            wall.material = wallMaterial;
+
+            const planeContext = new PlaneContext;
+            planeContext.mesh = wall;
+            planeContext.isVertical = true;
+            planeMeshMap.set(wall, planeContext);
+        }
+    }
 
     //#endregion
 
@@ -216,13 +288,16 @@ import earcut from "earcut";
         switch (pointerInfo.type) {
             case PointerEventTypes.POINTERDOWN:
                 const pickedMesh = pointerInfo.pickInfo.pickedMesh;
+                if (!pickedMesh) {
+                    return;
+                }
                 if (!planeMeshMap.has(pickedMesh)) {
-                    console.debug(`Picked plane mesh not found in planeMeshMap.`);
+                    console.debug(`Picked plane mesh (\"${pickedMesh.name}\") not found in planeMeshMap.`);
                     return;
                 }
                 const planeContext = planeMeshMap.get(pickedMesh);
-                if ("vertical" !== planeContext.xrPlaneInterface.xrPlane.orientation.toLowerCase()) {
-                    console.debug(`Plane orientation is not vertical. Orientation = ${planeContext.xrPlaneInterface.xrPlane.orientation.toLowerCase()}.`);
+                if (!planeContext.isVertical) {
+                    console.debug(`Plane orientation is not vertical.`);
                     return;
                 }
 
