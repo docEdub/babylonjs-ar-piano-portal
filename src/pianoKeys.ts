@@ -34,7 +34,7 @@ export class PianoKeys extends TransformNode {
                 */
 
                 // Create bottom part
-                const bottom = MeshBuilder.CreateBox("whiteKeyBottom", {width: props.bottomWidth, height: 1.5, depth: 7.25});
+                const bottom = MeshBuilder.CreateBox("whiteKeyBottom", {width: props.bottomWidth, height: 1.5, depth: 10});
 
                 // Create top part
                 const top = MeshBuilder.CreateBox("whiteKeyTop", {width: props.topWidth, height: 1.5, depth: 8.75});
