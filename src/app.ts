@@ -82,12 +82,13 @@ import { PianoKeys } from "./pianoKeys"
 
     //#endregion
 
+    const light = new HemisphericLight(`light`, new Vector3(0, 1, 0), scene);
+    light.intensity = 0.7;
+
     if (!useWebXR) {
         const camera = new FreeCamera(`camera`, new Vector3(0, 2, 10));
         camera.setTarget(new Vector3(0, 2, 0));
         camera.attachControl();
-        const light = new HemisphericLight(`light`, new Vector3(0, 1, 0), scene);
-        light.intensity = 0.7;
         const ground = MeshBuilder.CreateGround(`ground`, {width: 20, height: 20});
         ground.isPickable = false;
 
@@ -201,10 +202,11 @@ import { PianoKeys } from "./pianoKeys"
             wall.bakeCurrentTransformIntoVertices();
             wall.rotation.z = -Math.PI / 2;
             wall.rotation.y = -Math.PI / 2;
+            wall.rotation.x = Math.PI / 2;
             wall.position.y = 2;
             wall.position.z = 10;
-            wall.scaling.y = wall.scaling.z = 2 * wall.position.z;
-            wall.scaling.x = 2 * wall.position.y;
+            wall.scaling.x = wall.scaling.y = 2 * wall.position.z;
+            wall.scaling.z = 2 * wall.position.y;
             wall.rotateAround(Vector3.ZeroReadOnly, Vector3.UpReadOnly, Math.PI / 2 * i);
             wall.renderingGroupId = 0;
             wall.material = wallMaterial;
@@ -226,7 +228,6 @@ import { PianoKeys } from "./pianoKeys"
     const framePlaneMesh = MeshBuilder.CreatePlane("Frame");
     framePlaneMesh.rotation.x = -Math.PI / 2;
     framePlaneMesh.bakeCurrentTransformIntoVertices();
-    framePlaneMesh.scaling.setAll(1.5);
     framePlaneMesh.isPickable = false;
     framePlaneMesh.parent = frameTransform;
     const framePlaneMaterial = new StandardMaterial(`Frame.material`);
@@ -237,7 +238,6 @@ import { PianoKeys } from "./pianoKeys"
     // cylinder.position.y = 50;
     // cylinder.scaling.set(0.25, cylinder.position.y, 0.25);
     // cylinder.bakeCurrentTransformIntoVertices();
-    // cylinder.scaling.setAll(1.5);
     // cylinder.isPickable = false;
     // cylinder.parent = frameTransform;
     // const cylinderMaterial = new StandardMaterial(".cylinder.material");
