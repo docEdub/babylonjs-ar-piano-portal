@@ -16,6 +16,8 @@ export class PianoKeys extends TransformNode {
         const keyRadius = 24 //19.862536897868538;
         const keyCircumference = 122.4 + keyTopGap;
 
+        this.radius = keyRadius;
+
         const keyAngle = (keyX) => {
             keyX += keyOffsetX;
             keyX /= keyCircumference;
@@ -42,17 +44,17 @@ export class PianoKeys extends TransformNode {
 
                 // Merge bottom and top parts
                 // Parameters of Mesh.MergeMeshes: (arrayOfMeshes, disposeSource, allow32BitsIndices, meshSubclass, subdivideWithSubMeshes, multiMultiMaterials)
-                // const key = Mesh.MergeMeshes([bottom, top], true, false, null, false, false);
                 const key = Mesh.MergeMeshes([bottom, top], true, false, null, false, false);
                 const keyX = props.referencePositionX + props.wholePositionX;
+                const angle = keyAngle(keyX);
                 key.position.y = -keyRadius;
-                key.rotateAround(Vector3.ZeroReadOnly, Vector3.LeftHandedForwardReadOnly, keyAngle(keyX));
+                key.rotateAround(Vector3.ZeroReadOnly, Vector3.LeftHandedForwardReadOnly, angle);
                 key.name = props.note + props.register;
                 key.parent = parent;
                 key.renderingGroupId = 2;
                 key.isPickable = false;
 
-                return key;
+                return { angle: angle, note: `${props.note}${props.register}` };
             }
             else if (props.type === "black") {
                 /*
@@ -72,13 +74,14 @@ export class PianoKeys extends TransformNode {
                 key.position.z = 4.75;
                 key.position.y = -keyRadius;
                 const keyX = props.referencePositionX + props.wholePositionX;
-                key.rotateAround(Vector3.ZeroReadOnly, Vector3.LeftHandedForwardReadOnly, keyAngle(keyX));
+                const angle = keyAngle(keyX);
+                key.rotateAround(Vector3.ZeroReadOnly, Vector3.LeftHandedForwardReadOnly, angle);
                 key.material = blackMat;
                 key.parent = parent;
                 key.renderingGroupId = 2;
                 key.isPickable = false;
 
-                return key;
+                return { angle: angle, note: `${props.note}${props.register}` };
             }
         }
 
@@ -97,26 +100,40 @@ export class PianoKeys extends TransformNode {
             {type: "white", note: "B", topWidth: 1.3, bottomWidth: 2.4, topPositionX: 0.55, wholePositionX: 0},
         ]
 
+        let midiNoteNumber = 21; // Lowest A key on 88 key piano.
+
+        // Register 0
+        this._keys[midiNoteNumber++] = buildKey(this, {type: "white", note: "A", topWidth: 1.9, bottomWidth: 2.3, topPositionX: -0.20, wholePositionX: -2.4, register: 0, referencePositionX: -2.4*21});
+        keyParams.slice(10, 12).forEach(key => {
+            this._keys[midiNoteNumber++] = buildKey(this, Object.assign({register: 0, referencePositionX: -2.4*21}, key));
+        })
+
         // Register 1 through 7
         var referencePositionX = -2.4*14;
         for (let register = 1; register <= 7; register++) {
             keyParams.forEach(key => {
-                buildKey(this, Object.assign({register: register, referencePositionX: referencePositionX}, key));
+                this._keys[midiNoteNumber++] = buildKey(this, Object.assign({register: register, referencePositionX: referencePositionX}, key));
             })
             referencePositionX += 2.4*7;
         }
 
-        // Register 0
-        buildKey(this, {type: "white", note: "A", topWidth: 1.9, bottomWidth: 2.3, topPositionX: -0.20, wholePositionX: -2.4, register: 0, referencePositionX: -2.4*21});
-        keyParams.slice(10, 12).forEach(key => {
-            buildKey(this, Object.assign({register: 0, referencePositionX: -2.4*21}, key));
-        })
-
         // Register 8
-        buildKey(this, {type: "white", note: "C", topWidth: 2.3, bottomWidth: 2.3, topPositionX: 0, wholePositionX: -2.4*6, register: 8, referencePositionX: 84});
+        this._keys[midiNoteNumber++] = buildKey(this, {type: "white", note: "C", topWidth: 2.3, bottomWidth: 2.3, topPositionX: 0, wholePositionX: -2.4*6, register: 8, referencePositionX: 84});
+
+        console.debug(this._keys);
 
         this.rotateAround(Vector3.ZeroReadOnly, Vector3.RightReadOnly, -Math.PI / 2);
         this.scaling.setAll(0.0175);
         this.position.y += 0.2;
     }
+
+    public radius = 0;
+
+    public keyAngle = (midiNoteNumber: number): number => {
+        return this._keys[midiNoteNumber].angle;
+    }
+
+    private _keys = [];
+    private _whiteKeyMeshes = [];
+    private _blackKeyMeshes = [];
 }

@@ -27,6 +27,8 @@ import "@babylonjs/loaders";
 import earcut from "earcut";
 import { PianoKeys } from "./pianoKeys"
 
+import * as scoreJson from "./score.json"
+
 (async () => {
     //#region Setup engine and scene
 
@@ -194,7 +196,7 @@ import { PianoKeys } from "./pianoKeys"
         wallMaterial.diffuseColor.set(0.75, 0.75, 0.75);
 
         for (let i = 0; i < 4; i++) {
-            // Create simulated wall with final rotation y and z matching detected wall planes so the correct xfrom is
+            // Create simulated wall with final rotation y and z matching detected wall planes so the correct xform is
             // used when placing the frame.
             const wall = MeshBuilder.CreatePlane(`Wall`);
             wall.rotation.z = Math.PI / 2;
@@ -307,6 +309,41 @@ import { PianoKeys } from "./pianoKeys"
 
     //#endregion
 
+    const noteMeshes = [];
+
     const pianoKeys = new PianoKeys;
     pianoKeys.parent = frameTransform;
+
+    const createNoteMesh = (onTime: number, duration: number, angle: number): Mesh => {
+        const mesh = MeshBuilder.CreateCylinder(`noteMesh.prototype`, {
+            height: duration,
+            diameterBottom: 1,
+            diameterTop: 0
+        });
+        // mesh.rotation.x = Math.PI / 2;
+        mesh.position.x = pianoKeys.radius - 2;
+        mesh.position.y = onTime;
+        mesh.rotateAround(Vector3.ZeroReadOnly, Vector3.UpReadOnly, angle);
+        mesh.bakeCurrentTransformIntoVertices();
+        mesh.scaling.copyFrom(pianoKeys.scaling);
+        mesh.scaling.y = 0.5;
+        return mesh;
+    }
+
+    const scoreNotes = scoreJson.score;
+    for (let i = 0; i < scoreNotes.length; i++) {
+        const note = scoreNotes[i].note;
+        noteMeshes.push(createNoteMesh(note.onTime, note.offTime - note.onTime, pianoKeys.keyAngle(note.pitch)));
+    }
+
+    const scoreMesh = Mesh.MergeMeshes(noteMeshes, true, true, null, false, false);
+    scoreMesh.parent = frameTransform;
+    scoreMesh.renderingGroupId = 2;
+    const scoreMaterial = new StandardMaterial(`scoreMaterial`);
+    scoreMaterial.diffuseColor.set(1, 0.1, 0.25);
+    scoreMesh.material = scoreMaterial;
+
+    scene.onBeforeRenderObservable.add(() => {
+        scoreMesh.position.y -= engine.getDeltaTime() / 1000;
+    })
 })();
