@@ -1,6 +1,5 @@
 import {
     Color3,
-    HemisphericLight,
     Mesh,
     MeshBuilder,
     StandardMaterial,
