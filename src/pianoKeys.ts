@@ -16,6 +16,12 @@ export class PianoKeys extends TransformNode {
         const keyRadius = 24 //19.862536897868538;
         const keyCircumference = 122.4 + keyTopGap;
 
+        const whiteMaterial = new StandardMaterial(`pianoKeys.whiteMaterial`);
+        whiteMaterial.diffuseColor.set(1, 1, 1);
+
+        const blackMaterial = new StandardMaterial(`pianoKeys.blackMaterial`);
+        blackMaterial.diffuseColor.set(0, 0, 0);
+
         this.radius = keyRadius;
 
         const keyAngle = (keyX) => {
@@ -53,6 +59,7 @@ export class PianoKeys extends TransformNode {
                 key.parent = parent;
                 key.renderingGroupId = 2;
                 key.isPickable = false;
+                key.material = whiteMaterial;
 
                 return { angle: angle, note: `${props.note}${props.register}` };
             }
@@ -65,10 +72,6 @@ export class PianoKeys extends TransformNode {
                 {type: "black", note: "C#", wholePositionX: -13.45, register: 4, referencePositionX: 0}
                 */
 
-                // Create black color material
-                const blackMat = new StandardMaterial("black");
-                blackMat.diffuseColor = new Color3(0, 0, 0);
-
                 // Create black key
                 const key = MeshBuilder.CreateBox(props.note + props.register, {width: 1.4, height: 3, depth: 8.75});
                 key.position.z = 4.75;
@@ -76,10 +79,10 @@ export class PianoKeys extends TransformNode {
                 const keyX = props.referencePositionX + props.wholePositionX;
                 const angle = keyAngle(keyX);
                 key.rotateAround(Vector3.ZeroReadOnly, Vector3.LeftHandedForwardReadOnly, angle);
-                key.material = blackMat;
                 key.parent = parent;
                 key.renderingGroupId = 2;
                 key.isPickable = false;
+                key.material = blackMaterial;
 
                 return { angle: angle, note: `${props.note}${props.register}` };
             }
