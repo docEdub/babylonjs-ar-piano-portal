@@ -9,6 +9,7 @@ import {
     Matrix,
     Mesh,
     MeshBuilder,
+    Plane,
     PointerEventTypes,
     PolygonMeshBuilder,
     Quaternion,
@@ -17,6 +18,7 @@ import {
     TransformNode,
     Vector2,
     Vector3,
+    VertexBuffer,
     WebXRDefaultExperience,
     WebXRFeaturesManager,
     WebXRPlaneDetector,
@@ -90,6 +92,7 @@ import * as scoreJson from "./score.json"
 
     if (!useWebXR) {
         const camera = new FreeCamera(`camera`, new Vector3(0, 2, 10));
+        camera.speed = 0.25;
         camera.setTarget(new Vector3(0, 2, 0));
         camera.attachControl();
         const ground = MeshBuilder.CreateGround(`ground`, {width: 20, height: 20});
@@ -228,6 +231,8 @@ import * as scoreJson from "./score.json"
     const frameTransform = new TransformNode("Frame.transform");
     frameTransform.scaling.setAll(0);
 
+    const clipPlane = new Plane(0, 0, -1, -10);
+
     const framePlaneMesh = MeshBuilder.CreatePlane("Frame");
     framePlaneMesh.rotation.x = -Math.PI / 2;
     framePlaneMesh.bakeCurrentTransformIntoVertices();
@@ -253,6 +258,7 @@ import * as scoreJson from "./score.json"
     framePlaneMesh.renderingGroupId = 1;
     // cylinder.renderingGroupId = 2;
     scene.setRenderingAutoClearDepthStencil(2, false);
+    scene.setRenderingAutoClearDepthStencil(3, true);
     engine.setStencilBuffer(true);
     scene.onBeforeRenderingGroupObservable.add((groupInfo) => {
         switch (groupInfo.renderingGroupId) {
@@ -260,10 +266,19 @@ import * as scoreJson from "./score.json"
                 engine.setDepthFunction(Engine.LESS);
                 engine.setStencilFunction(Engine.EQUAL);
                 break;
+            // case 0:
+            case 3:
+                scene.clipPlane = clipPlane;
             default:
                 engine.setDepthFunction(Engine.LESS);
                 engine.setStencilFunction(Engine.ALWAYS);
-                break;
+        }
+    });
+    scene.onAfterRenderingGroupObservable.add((groupInfo) => {
+        switch (groupInfo.renderingGroupId) {
+            // case 0:
+            case 3:
+                scene.clipPlane = null;
         }
     });
 
@@ -292,6 +307,13 @@ import * as scoreJson from "./score.json"
 
                 frameTransform.scaling.setAll(1);
                 frameTransform.position.copyFrom(pointerInfo.pickInfo.pickedPoint);
+                // clipPlane.d = -frameTransform.position.length();
+                const vertices = pickedMesh.getVerticesData(VertexBuffer.PositionKind);
+                clipPlane.copyFromPoints(
+                    Vector3.TransformCoordinates(new Vector3(vertices[0], vertices[1], vertices[2]), pickedMesh.getWorldMatrix()),
+                    Vector3.TransformCoordinates(new Vector3(vertices[3], vertices[4], vertices[5]), pickedMesh.getWorldMatrix()),
+                    Vector3.TransformCoordinates(new Vector3(vertices[6], vertices[7], vertices[8]), pickedMesh.getWorldMatrix())
+                )
                 if (pickedMesh.rotationQuaternion) {
                     if (!frameTransform.rotationQuaternion) {
                         frameTransform.rotationQuaternion = pickedMesh.rotationQuaternion.clone();
@@ -299,9 +321,13 @@ import * as scoreJson from "./score.json"
                     else {
                         frameTransform.rotationQuaternion.copyFrom(pickedMesh.rotationQuaternion);
                     }
+                    // clipPlane.normal.set(0, 1, 0);
+                    // clipPlane.normal.applyRotationQuaternionInPlace(pickedMesh.rotationQuaternion);
+                    console.debug(`clipPlane =`, clipPlane);
                 }
                 else {
                     frameTransform.rotation.copyFrom(pickedMesh.rotation);
+                    Vector3.TransformCoordinatesToRef(clipPlane.normal, frameTransform.getWorldMatrix(), clipPlane.normal);
                 }
                 break;
         }
@@ -336,14 +362,24 @@ import * as scoreJson from "./score.json"
         noteMeshes.push(createNoteMesh(note.onTime, note.offTime - note.onTime, pianoKeys.keyAngle(note.pitch)));
     }
 
-    const scoreMesh = Mesh.MergeMeshes(noteMeshes, true, true, null, false, false);
-    scoreMesh.parent = frameTransform;
-    scoreMesh.renderingGroupId = 2;
+    const scoreMeshTransform = new TransformNode(`scoreMeshTransform`);
+    scoreMeshTransform.parent = frameTransform;
+
+    const scoreMeshInFrame = Mesh.MergeMeshes(noteMeshes, true, true, null, false, false);
+    scoreMeshInFrame.name = `scoreMeshInFrame`;
+    scoreMeshInFrame.renderingGroupId = 2;
+    scoreMeshInFrame.parent = scoreMeshTransform;
     const scoreMaterial = new StandardMaterial(`scoreMaterial`);
-    scoreMaterial.diffuseColor.set(1, 0.1, 0.25);
-    scoreMesh.material = scoreMaterial;
+    scoreMaterial.diffuseColor.set(1, 0.2, 0.5);
+    scoreMeshInFrame.material = scoreMaterial;
+
+    const scoreMeshOutOfFrame = scoreMeshInFrame.clone(`scoreMeshOutOfFrame`);
+    scoreMeshOutOfFrame.parent = scoreMeshTransform;
+    scoreMeshOutOfFrame.renderingGroupId = 3;
 
     scene.onBeforeRenderObservable.add(() => {
-        scoreMesh.position.y -= engine.getDeltaTime() / 1000;
+        scoreMeshTransform.position.y -= engine.getDeltaTime() / 1000;
     })
+
+    scoreMeshTransform.position.y -= 10;
 })();
