@@ -242,17 +242,6 @@ import * as scoreJson from "./score.json"
     framePlaneMaterial.disableDepthWrite = true;
     framePlaneMesh.material = framePlaneMaterial;
 
-    // const cylinder = MeshBuilder.CreateCylinder(".cylinder");
-    // cylinder.position.y = 50;
-    // cylinder.scaling.set(0.25, cylinder.position.y, 0.25);
-    // cylinder.bakeCurrentTransformIntoVertices();
-    // cylinder.isPickable = false;
-    // cylinder.parent = frameTransform;
-    // const cylinderMaterial = new StandardMaterial(".cylinder.material");
-    // cylinderMaterial.alpha = 0.5;
-    // cylinderMaterial.emissiveColor.set(1, 0, 1);
-    // cylinder.material = cylinderMaterial;
-
     // Use `framePlaneMesh` as a stencil so nothing gets drawn outside of it.
     // This creates the magic portal effect.
     framePlaneMesh.renderingGroupId = 1;
@@ -365,7 +354,7 @@ import * as scoreJson from "./score.json"
     const scoreMeshTransform = new TransformNode(`scoreMeshTransform`);
     scoreMeshTransform.parent = frameTransform;
 
-    const scoreMeshInFrame = Mesh.MergeMeshes(noteMeshes, true, true, null, false, false);
+    const scoreMeshInFrame = Mesh.MergeMeshes(noteMeshes, true, true);
     scoreMeshInFrame.name = `scoreMeshInFrame`;
     scoreMeshInFrame.renderingGroupId = 2;
     scoreMeshInFrame.parent = scoreMeshTransform;
