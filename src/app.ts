@@ -326,14 +326,34 @@ import * as scoreJson from "./score.json"
     const pianoKeys = new PianoKeys;
     pianoKeys.parent = frameTransform;
 
+    const scoreNotes = scoreJson.score;
+
+    let maxNoteDuration = 0;
+
+    // Trim overlapping notes and find max note duration.
+    for (let i = 0; i < scoreNotes.length; i++) {
+        const note = scoreNotes[i].note;
+        for (let j = i + 1; j < scoreNotes.length; j++) {
+            const futureNote = scoreNotes[j].note;
+            if (futureNote.pitch === note.pitch && futureNote.onTime < note.offTime) {
+                note.offTime = futureNote.onTime;
+                break;
+            }
+            if (note.offTime <= scoreNotes[j].note.onTime) {
+                break;
+            }
+        }
+        maxNoteDuration = Math.max(maxNoteDuration, note.offTime - note.onTime);
+    }
+
     const createNoteMesh = (onTime: number, duration: number, angle: number): Mesh => {
         const mesh = MeshBuilder.CreateCylinder(`noteMesh.prototype`, {
             height: duration,
             diameterBottom: 1,
-            diameterTop: 0
+            diameterTop: 0 // 1 - duration / maxNoteDuration
         });
         mesh.position.x = pianoKeys.radius - 2;
-        mesh.position.y = onTime;
+        mesh.position.y = onTime + duration / 2;
         mesh.rotateAround(Vector3.ZeroReadOnly, Vector3.UpReadOnly, angle);
         mesh.bakeCurrentTransformIntoVertices();
         mesh.scaling.copyFrom(pianoKeys.scaling);
@@ -341,7 +361,6 @@ import * as scoreJson from "./score.json"
         return mesh;
     }
 
-    const scoreNotes = scoreJson.score;
     for (let i = 0; i < scoreNotes.length; i++) {
         const note = scoreNotes[i].note;
         noteMeshes.push(createNoteMesh(note.onTime, note.offTime - note.onTime, pianoKeys.keyAngle(note.pitch)));
