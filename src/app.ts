@@ -297,7 +297,6 @@ import * as scoreJson from "./score.json"
 
                 frameTransform.scaling.setAll(1);
                 frameTransform.position.copyFrom(pointerInfo.pickInfo.pickedPoint);
-                // clipPlane.d = -frameTransform.position.length();
                 const vertices = pickedMesh.getVerticesData(VertexBuffer.PositionKind);
                 clipPlane.copyFromPoints(
                     Vector3.TransformCoordinates(new Vector3(vertices[0], vertices[1], vertices[2]), pickedMesh.getWorldMatrix()),
@@ -311,9 +310,6 @@ import * as scoreJson from "./score.json"
                     else {
                         frameTransform.rotationQuaternion.copyFrom(pickedMesh.rotationQuaternion);
                     }
-                    // clipPlane.normal.set(0, 1, 0);
-                    // clipPlane.normal.applyRotationQuaternionInPlace(pickedMesh.rotationQuaternion);
-                    console.debug(`clipPlane =`, clipPlane);
                 }
                 else {
                     frameTransform.rotation.copyFrom(pickedMesh.rotation);
@@ -336,7 +332,6 @@ import * as scoreJson from "./score.json"
             diameterBottom: 1,
             diameterTop: 0
         });
-        // mesh.rotation.x = Math.PI / 2;
         mesh.position.x = pianoKeys.radius - 2;
         mesh.position.y = onTime;
         mesh.rotateAround(Vector3.ZeroReadOnly, Vector3.UpReadOnly, angle);

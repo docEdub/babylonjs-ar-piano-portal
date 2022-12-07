@@ -123,8 +123,6 @@ export class PianoKeys extends TransformNode {
         // Register 8
         this._keys[midiNoteNumber++] = buildKey(this, {type: "white", note: "C", topWidth: 2.3, bottomWidth: 2.3, topPositionX: 0, wholePositionX: -2.4*6, register: 8, referencePositionX: 84});
 
-        console.debug(this._keys);
-
         this.rotateAround(Vector3.ZeroReadOnly, Vector3.RightReadOnly, -Math.PI / 2);
         this.scaling.setAll(0.0175);
         this.position.y += 0.2;
