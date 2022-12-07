@@ -92,6 +92,7 @@ import * as scoreJson from "./score.json"
 
     if (!useWebXR) {
         const camera = new FreeCamera(`camera`, new Vector3(0, 2, 10));
+        camera.minZ = 0;
         camera.speed = 0.25;
         camera.setTarget(new Vector3(0, 2, 0));
         camera.attachControl();
