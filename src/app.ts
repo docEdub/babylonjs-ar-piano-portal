@@ -358,6 +358,7 @@ import * as scoreJson from "./score.json"
     scoreMeshInFrame.name = `scoreMeshInFrame`;
     scoreMeshInFrame.renderingGroupId = 2;
     scoreMeshInFrame.parent = scoreMeshTransform;
+    scoreMeshInFrame.rotation.y = -Math.PI / 2;
     const scoreMaterial = new StandardMaterial(`scoreMaterial`);
     scoreMaterial.diffuseColor.set(1, 0.2, 0.5);
     scoreMeshInFrame.material = scoreMaterial;
