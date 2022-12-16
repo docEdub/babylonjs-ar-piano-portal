@@ -384,7 +384,7 @@ import * as scoreJson from "./score.json"
         maxNoteDuration = Math.max(maxNoteDuration, note.offTime - note.onTime);
     }
 
-    const createNoteMesh = (onTime: number, duration: number, angle: number): Mesh => {
+    const createNoteMesh = (onTime: number, duration: number, angle: number): Mesh[] => {
         const mesh = MeshBuilder.CreateCylinder(`noteMesh.prototype`, {
             height: duration,
             diameterBottom: 1,
@@ -396,12 +396,23 @@ import * as scoreJson from "./score.json"
         mesh.bakeCurrentTransformIntoVertices();
         mesh.scaling.copyFrom(pianoKeys.scaling);
         mesh.scaling.y = 0.5;
-        return mesh;
+        mesh.bakeCurrentTransformIntoVertices();
+
+        const sphere = MeshBuilder.CreateSphere(``, { segments: 8 });
+        sphere.position.x = pianoKeys.radius - 2
+        sphere.position.y = onTime * 28.575; // TODO: Fix this. It's off. It gets further behind as onTime increases.
+        sphere.scaling.setAll(1.1);
+        sphere.rotateAround(Vector3.ZeroReadOnly, Vector3.UpReadOnly, angle);
+        sphere.bakeCurrentTransformIntoVertices();
+        sphere.scaling.copyFrom(pianoKeys.scaling);
+        sphere.bakeCurrentTransformIntoVertices();
+
+        return [ mesh, sphere ];
     }
 
     for (let i = 0; i < scoreNotes.length; i++) {
         const note = scoreNotes[i].note;
-        noteMeshes.push(createNoteMesh(note.onTime, note.offTime - note.onTime, pianoKeys.keyAngle(note.pitch)));
+        noteMeshes.push(...createNoteMesh(note.onTime, note.offTime - note.onTime, pianoKeys.keyAngle(note.pitch)));
     }
 
     const scoreMeshTransform = new TransformNode(`scoreMeshTransform`);
@@ -409,11 +420,17 @@ import * as scoreJson from "./score.json"
 
     const scoreMeshInFrame = Mesh.MergeMeshes(noteMeshes, true, true);
     scoreMeshInFrame.name = `scoreMeshInFrame`;
+    scoreMeshInFrame.isPickable = false;
     scoreMeshInFrame.renderingGroupId = 2;
     scoreMeshInFrame.parent = scoreMeshTransform;
     scoreMeshInFrame.rotation.y = -Math.PI / 2;
+    scoreMeshInFrame.createNormals(false);
     const scoreMaterial = new StandardMaterial(`scoreMaterial`);
-    scoreMaterial.diffuseColor.set(1, 0.2, 0.5);
+    scoreMaterial.diffuseColor.set(1, 0.75, 0.75);
+    scoreMaterial.specularColor.set(1, 1, 1);
+    scoreMaterial.specularPower = 10;
+    scoreMaterial.ambientColor.set(1, 0, 0);
+    scoreMaterial.roughness = 10;
     scoreMeshInFrame.material = scoreMaterial;
 
     const scoreMeshOutOfFrame = scoreMeshInFrame.clone(`scoreMeshOutOfFrame`);
@@ -422,7 +439,7 @@ import * as scoreJson from "./score.json"
 
     scene.onBeforeRenderObservable.add(() => {
         scoreMeshTransform.position.y -= engine.getDeltaTime() / 1000;
-    })
+    });
 
-    scoreMeshTransform.position.y -= 10;
+    // scoreMeshTransform.position.y -= 10;
 })();
