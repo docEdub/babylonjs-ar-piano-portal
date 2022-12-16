@@ -1,6 +1,7 @@
 import {
     AbstractMesh,
     Color3,
+    CubeTexture,
     Engine,
     FreeCamera,
     HemisphericLight,
@@ -15,6 +16,7 @@ import {
     Quaternion,
     Scene,
     StandardMaterial,
+    Texture,
     TransformNode,
     Vector2,
     Vector3,
@@ -89,23 +91,6 @@ import * as scoreJson from "./score.json"
     // TODO: See if light estimation can work for WebXR experience instead using the stock hemispheric light.
     const light = new HemisphericLight(`light`, new Vector3(0, 1, 0), scene);
     light.intensity = 0.7;
-
-    if (!useWebXR) {
-        const camera = new FreeCamera(`camera`, new Vector3(0, 2, 10));
-        camera.minZ = 0;
-        camera.speed = 0.25;
-        camera.setTarget(new Vector3(0, 2, 0));
-        camera.attachControl();
-        const ground = MeshBuilder.CreateGround(`ground`, {width: 20, height: 20});
-        ground.isPickable = false;
-
-        camera.keysUpward.push(69); // E
-        camera.keysDownward.push(81); // Q
-        camera.keysUp.push(87); // W
-        camera.keysLeft.push(65); // A
-        camera.keysDown.push(83); // S
-        camera.keysRight.push(68); // D
-    }
 
     //#region Room setup plane processing
     // See https://playground.babylonjs.com/#98TM63.
@@ -196,7 +181,39 @@ import * as scoreJson from "./score.json"
         });
     }
     else { // useWebXR == false
+        scene.collisionsEnabled = true;
+        scene.gravity = new Vector3(0, -0.15, 0);
+
+        const camera = new FreeCamera(`camera`, new Vector3(0, 2, 10));
+        camera.applyGravity = true;
+        camera.checkCollisions = true;
+        camera.ellipsoid = new Vector3(1, 1, 1);
+        camera.minZ = 0;
+        camera.keysDown.push(83); // S
+        camera.keysDownward.push(81); // Q
+        camera.keysLeft.push(65); // A
+        camera.keysRight.push(68); // D
+        camera.keysUp.push(87); // W
+        camera.keysUpward.push(69); // E
+        camera.speed = 0.25;
+        camera.attachControl();
+        camera.setTarget(new Vector3(0, 2, 0));
+
+        let skybox = MeshBuilder.CreateBox(`skyBox`, { size:1000 }, scene);
+        let skyboxMaterial = new StandardMaterial(`skyBoxMaterial`, scene);
+        skyboxMaterial.backFaceCulling = false;
+        skyboxMaterial.reflectionTexture = new CubeTexture("skybox/skybox", scene);
+        skyboxMaterial.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
+        skyboxMaterial.diffuseColor = new Color3(0, 0, 0);
+        skyboxMaterial.specularColor = new Color3(0, 0, 0);
+        skybox.material = skyboxMaterial;
+
+        const ground = MeshBuilder.CreateGround(`ground`, {width: 20, height: 20});
+        ground.checkCollisions = true;
+        ground.isPickable = false;
+
         const wallMaterial = new StandardMaterial(`Wall.material`);
+        wallMaterial.alpha = 0.25;
         wallMaterial.diffuseColor.set(0.75, 0.75, 0.75);
 
         for (let i = 0; i < 4; i++) {
