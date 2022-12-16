@@ -184,7 +184,7 @@ import * as scoreJson from "./score.json"
         scene.collisionsEnabled = true;
         scene.gravity = new Vector3(0, -0.15, 0);
 
-        const camera = new FreeCamera(`camera`, new Vector3(0, 2, 10));
+        const camera = new FreeCamera(`camera`, new Vector3(0, 2, 0));
         camera.applyGravity = true;
         camera.checkCollisions = true;
         camera.ellipsoid = new Vector3(1, 1, 1);
@@ -197,16 +197,17 @@ import * as scoreJson from "./score.json"
         camera.keysUpward.push(69); // E
         camera.speed = 0.25;
         camera.attachControl();
-        camera.setTarget(new Vector3(0, 2, 0));
+        camera.setTarget(new Vector3(0, 2, -5));
 
-        let skybox = MeshBuilder.CreateBox(`skyBox`, { size:1000 }, scene);
-        let skyboxMaterial = new StandardMaterial(`skyBoxMaterial`, scene);
-        skyboxMaterial.backFaceCulling = false;
-        skyboxMaterial.reflectionTexture = new CubeTexture("skybox/skybox", scene);
-        skyboxMaterial.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
-        skyboxMaterial.diffuseColor = new Color3(0, 0, 0);
-        skyboxMaterial.specularColor = new Color3(0, 0, 0);
-        skybox.material = skyboxMaterial;
+        let daySkyBox = MeshBuilder.CreateBox(`daySkyBox`, { size:1000 }, scene);
+        daySkyBox.renderingGroupId = 0;
+        let daySkyBoxMaterial = new StandardMaterial(`daySkyBoxMaterial`, scene);
+        daySkyBoxMaterial.backFaceCulling = false;
+        daySkyBoxMaterial.reflectionTexture = new CubeTexture("skyboxes/day/", scene);
+        daySkyBoxMaterial.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
+        daySkyBoxMaterial.diffuseColor = new Color3(0, 0, 0);
+        daySkyBoxMaterial.specularColor = new Color3(0, 0, 0);
+        daySkyBox.material = daySkyBoxMaterial;
 
         const ground = MeshBuilder.CreateGround(`ground`, {width: 20, height: 20});
         ground.checkCollisions = true;
@@ -220,6 +221,7 @@ import * as scoreJson from "./score.json"
             // Create simulated wall with final rotation y and z matching detected wall planes so the correct xform is
             // used when placing the frame.
             const wall = MeshBuilder.CreatePlane(`Wall`);
+            wall.checkCollisions = true;
             wall.rotation.z = Math.PI / 2;
             wall.rotation.y = Math.PI / 2;
             wall.rotation.x = -Math.PI / 2;
@@ -232,7 +234,7 @@ import * as scoreJson from "./score.json"
             wall.scaling.x = wall.scaling.y = 2 * wall.position.z;
             wall.scaling.z = 2 * wall.position.y;
             wall.rotateAround(Vector3.ZeroReadOnly, Vector3.UpReadOnly, Math.PI / 2 * i);
-            wall.renderingGroupId = 0;
+            wall.renderingGroupId = 3;
             wall.material = wallMaterial;
 
             const planeContext = new PlaneContext;
@@ -241,6 +243,18 @@ import * as scoreJson from "./score.json"
             planeMeshMap.set(wall, planeContext);
         }
     }
+
+    let nightSkyBox = MeshBuilder.CreateBox(`nightSkyBox`, { size:2000 }, scene);
+    nightSkyBox.renderingGroupId = 2;
+    nightSkyBox.rotation.y = Math.PI / 2;
+    nightSkyBox.rotation.z = -Math.PI / 2;
+    let nightSkyBoxMaterial = new StandardMaterial(`nightSkyBoxMaterial`, scene);
+    nightSkyBoxMaterial.backFaceCulling = false;
+    nightSkyBoxMaterial.reflectionTexture = new CubeTexture("skyboxes/night/", scene);
+    nightSkyBoxMaterial.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
+    nightSkyBoxMaterial.diffuseColor = new Color3(0, 0, 0);
+    nightSkyBoxMaterial.specularColor = new Color3(0, 0, 0);
+    nightSkyBox.material = nightSkyBoxMaterial;
 
     //#endregion
 
@@ -312,8 +326,15 @@ import * as scoreJson from "./score.json"
 
                 // TODO: Add logic to keep frame from overlapping with floor, ceiling or another wall.
 
-                frameTransform.scaling.setAll(1);
-                frameTransform.position.copyFrom(pointerInfo.pickInfo.pickedPoint);
+                if (useWebXR) {
+                    frameTransform.scaling.setAll(1);
+                    frameTransform.position.copyFrom(pointerInfo.pickInfo.pickedPoint);
+                }
+                else {
+                    frameTransform.scaling.setAll(4);
+                    frameTransform.position.copyFrom(pointerInfo.pickInfo.pickedPoint);
+                    frameTransform.position.y = 2;
+                }
                 const vertices = pickedMesh.getVerticesData(VertexBuffer.PositionKind);
                 clipPlane.copyFromPoints(
                     Vector3.TransformCoordinates(new Vector3(vertices[0], vertices[1], vertices[2]), pickedMesh.getWorldMatrix()),
