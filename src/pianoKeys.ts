@@ -2,6 +2,7 @@ import {
     Color3,
     Mesh,
     MeshBuilder,
+    Quaternion,
     StandardMaterial,
     TransformNode,
     Vector3,
@@ -17,10 +18,13 @@ export class PianoKeys extends TransformNode {
         const keyCircumference = 122.4 + keyTopGap;
 
         const whiteMaterial = new StandardMaterial(`pianoKeys.whiteMaterial`);
-        whiteMaterial.diffuseColor.set(1, 1, 1);
+        whiteMaterial.diffuseColor.set(0.75, 0.75, 0.75);
 
         const blackMaterial = new StandardMaterial(`pianoKeys.blackMaterial`);
         blackMaterial.diffuseColor.set(0, 0, 0);
+
+        const litMaterial = new StandardMaterial(`pianoKeys.litMaterial`);
+        litMaterial.emissiveColor.set(1, 1, 1);
 
         this.radius = keyRadius;
 
@@ -57,7 +61,7 @@ export class PianoKeys extends TransformNode {
                 key.rotateAround(Vector3.ZeroReadOnly, Vector3.LeftHandedForwardReadOnly, angle);
                 key.name = props.note + props.register;
 
-                return { mesh: key, angle: angle, note: `${props.note}${props.register}` };
+                return { isWhite: true, mesh: key, angle: angle, note: `${props.note}${props.register}`, position: key.position, rotation: key.rotationQuaternion, litInstance: null };
             }
             else if (props.type === "black") {
                 /*
@@ -76,7 +80,7 @@ export class PianoKeys extends TransformNode {
                 const angle = keyAngle(keyX);
                 key.rotateAround(Vector3.ZeroReadOnly, Vector3.LeftHandedForwardReadOnly, angle);
 
-                return { mesh: key, angle: angle, note: `${props.note}${props.register}` };
+                return { isWhite: false, mesh: key, angle: angle, note: `${props.note}${props.register}`, position: key.position, rotation: key.rotationQuaternion, litInstance: null };
             }
         }
 
@@ -160,6 +164,34 @@ export class PianoKeys extends TransformNode {
         this.rotateAround(Vector3.ZeroReadOnly, Vector3.RightReadOnly, -Math.PI / 2);
         this.scaling.setAll(0.0175);
         this.position.y += 0.2;
+
+        // Create lit instances.
+
+        const whiteLitSource = buildKey(this, {type: "white", note: "C", topWidth: 2.3, bottomWidth: 2.3, topPositionX: 0, wholePositionX: -2.4*6, register: 8, referencePositionX: 84}).mesh;
+        whiteLitSource.material = litMaterial;
+        whiteLitSource.renderingGroupId = 2;
+        whiteLitSource.parent = this;
+        whiteLitSource.isVisible = false;
+
+        const blackLitSource = buildKey(this, {type: "black", note: "A#", wholePositionX: -0.85}).mesh;
+        blackLitSource.material = litMaterial;
+        blackLitSource.renderingGroupId = 2;
+        blackLitSource.parent = this;
+        blackLitSource.isVisible = false;
+
+        this._keys.forEach((key) => {
+            if (key.isWhite) {
+                key.litInstance = whiteLitSource.createInstance(``);
+            }
+            else {
+                key.litInstance = blackLitSource.createInstance(``);
+            }
+            key.litInstance.scaling.setAll(1.01);
+            key.litInstance.rotationQuaternion.copyFrom(key.rotation);
+            key.litInstance.position.copyFrom(key.position);
+            key.litInstance.isVisible = false;
+            key.litInstance.parent = this;
+        });
     }
 
     public radius = 0;
@@ -168,7 +200,13 @@ export class PianoKeys extends TransformNode {
         return this._keys[midiNoteNumber].angle;
     }
 
+    public noteOn(noteNumber) {
+        this._keys[noteNumber].litInstance.isVisible = true;
+    }
+
+    public noteOff(noteNumber) {
+        this._keys[noteNumber].litInstance.isVisible = false;
+    }
+
     private _keys = [];
-    private _whiteKeyMeshes = [];
-    private _blackKeyMeshes = [];
 }

@@ -458,9 +458,34 @@ import * as scoreJson from "./score.json"
         streaming: true
     });
 
+    let noteOnIndex = 0;
+    let noteOffIndex = 0;
+
     scene.onBeforeRenderingGroupObservable.add((groupInfo) => {
         if (audio.isPlaying) {
             scoreMeshTransform.position.y = -(audio.currentTime / 4) - 0.6;
+
+            const time = audio.currentTime + 3.575;
+            while (noteOnIndex < scoreNotes.length) {
+                const note = scoreNotes[noteOnIndex].note;
+                if (time < note.onTime) {
+                    break;
+                }
+                if (time < note.offTime) {
+                    pianoKeys.noteOn(note.pitch);
+                }
+                noteOnIndex++;
+            }
+            while (noteOffIndex < scoreNotes.length) {
+                const note = scoreNotes[noteOffIndex].note
+                if (time < note.offTime) {
+                    break;
+                }
+                if (note.offTime <= time) {
+                    pianoKeys.noteOff(note.pitch);
+                }
+                noteOffIndex++;
+            }
         }
     });
 })();
