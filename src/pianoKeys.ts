@@ -56,12 +56,8 @@ export class PianoKeys extends TransformNode {
                 key.position.y = -keyRadius;
                 key.rotateAround(Vector3.ZeroReadOnly, Vector3.LeftHandedForwardReadOnly, angle);
                 key.name = props.note + props.register;
-                key.parent = parent;
-                key.renderingGroupId = 2;
-                key.isPickable = false;
-                key.material = whiteMaterial;
 
-                return { angle: angle, note: `${props.note}${props.register}` };
+                return { mesh: key, angle: angle, note: `${props.note}${props.register}` };
             }
             else if (props.type === "black") {
                 /*
@@ -79,12 +75,8 @@ export class PianoKeys extends TransformNode {
                 const keyX = props.referencePositionX + props.wholePositionX;
                 const angle = keyAngle(keyX);
                 key.rotateAround(Vector3.ZeroReadOnly, Vector3.LeftHandedForwardReadOnly, angle);
-                key.parent = parent;
-                key.renderingGroupId = 2;
-                key.isPickable = false;
-                key.material = blackMaterial;
 
-                return { angle: angle, note: `${props.note}${props.register}` };
+                return { mesh: key, angle: angle, note: `${props.note}${props.register}` };
             }
         }
 
@@ -105,23 +97,65 @@ export class PianoKeys extends TransformNode {
 
         let midiNoteNumber = 21; // Lowest A key on 88 key piano.
 
+        const whiteKeyMeshes = [];
+        const blackKeyMeshes = [];
+
         // Register 0
-        this._keys[midiNoteNumber++] = buildKey(this, {type: "white", note: "A", topWidth: 1.9, bottomWidth: 2.3, topPositionX: -0.20, wholePositionX: -2.4, register: 0, referencePositionX: -2.4*21});
-        keyParams.slice(10, 12).forEach(key => {
-            this._keys[midiNoteNumber++] = buildKey(this, Object.assign({register: 0, referencePositionX: -2.4*21}, key));
-        })
+        {
+            const builtKey = buildKey(this, {type: "white", note: "A", topWidth: 1.9, bottomWidth: 2.3, topPositionX: -0.20, wholePositionX: -2.4, register: 0, referencePositionX: -2.4 * 21});
+            this._keys[midiNoteNumber++] = builtKey;
+            whiteKeyMeshes.push(builtKey.mesh);
+
+            keyParams.slice(10, 12).forEach(key => {
+                const builtKey = buildKey(this, Object.assign({register: 0, referencePositionX: -2.4 * 21}, key));
+                this._keys[midiNoteNumber++] = builtKey;
+
+                if (key.type == "white") {
+                    whiteKeyMeshes.push(builtKey.mesh);
+                }
+                else {
+                    blackKeyMeshes.push(builtKey.mesh);
+                }
+            });
+        }
 
         // Register 1 through 7
-        var referencePositionX = -2.4*14;
-        for (let register = 1; register <= 7; register++) {
-            keyParams.forEach(key => {
-                this._keys[midiNoteNumber++] = buildKey(this, Object.assign({register: register, referencePositionX: referencePositionX}, key));
-            })
-            referencePositionX += 2.4*7;
+        {
+            var referencePositionX = -2.4*14;
+            for (let register = 1; register <= 7; register++) {
+                keyParams.forEach(key => {
+                    const builtKey = buildKey(this, Object.assign({register: register, referencePositionX: referencePositionX}, key));
+                    this._keys[midiNoteNumber++] = builtKey;
+
+                    if (key.type == "white") {
+                        whiteKeyMeshes.push(builtKey.mesh);
+                    }
+                    else {
+                        blackKeyMeshes.push(builtKey.mesh);
+                    }
+                    })
+                referencePositionX += 2.4*7;
+            }
         }
 
         // Register 8
-        this._keys[midiNoteNumber++] = buildKey(this, {type: "white", note: "C", topWidth: 2.3, bottomWidth: 2.3, topPositionX: 0, wholePositionX: -2.4*6, register: 8, referencePositionX: 84});
+        {
+            const builtKey = buildKey(this, {type: "white", note: "C", topWidth: 2.3, bottomWidth: 2.3, topPositionX: 0, wholePositionX: -2.4*6, register: 8, referencePositionX: 84});
+            this._keys[midiNoteNumber++] = builtKey;
+            whiteKeyMeshes.push(builtKey.mesh);
+        }
+
+        const whiteKeysMesh = Mesh.MergeMeshes(whiteKeyMeshes, true, true);
+        whiteKeysMesh.parent = this;
+        whiteKeysMesh.renderingGroupId = 2;
+        whiteKeysMesh.isPickable = false;
+        whiteKeysMesh.material = whiteMaterial;
+
+        const blackKeysMesh = Mesh.MergeMeshes(blackKeyMeshes, true, true);
+        blackKeysMesh.parent = this;
+        blackKeysMesh.renderingGroupId = 2;
+        blackKeysMesh.isPickable = false;
+        blackKeysMesh.material = blackMaterial;
 
         this.rotateAround(Vector3.ZeroReadOnly, Vector3.RightReadOnly, -Math.PI / 2);
         this.scaling.setAll(0.0175);
