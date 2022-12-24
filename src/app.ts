@@ -1,5 +1,6 @@
 import {
     AbstractMesh,
+    AudioEngine,
     Color3,
     CubeTexture,
     Engine,
@@ -15,6 +16,7 @@ import {
     PolygonMeshBuilder,
     Quaternion,
     Scene,
+    Sound,
     StandardMaterial,
     Texture,
     TransformNode,
@@ -353,6 +355,14 @@ import * as scoreJson from "./score.json"
                     frameTransform.rotation.copyFrom(pickedMesh.rotation);
                     Vector3.TransformCoordinatesToRef(clipPlane.normal, frameTransform.getWorldMatrix(), clipPlane.normal);
                 }
+
+                if (audioReady) {
+                    audio.play();
+                }
+                else {
+                    audioPlayWhenReady = true;
+                }
+
                 break;
         }
     });
@@ -433,9 +443,22 @@ import * as scoreJson from "./score.json"
     scoreMeshOutOfFrame.parent = scoreMeshTransform;
     scoreMeshOutOfFrame.renderingGroupId = 3;
 
-    scene.onBeforeRenderObservable.add(() => {
-        scoreMeshTransform.position.y -= engine.getDeltaTime() / 1000;
+    let audioPlayWhenReady = false;
+    let audioReady = false;
+
+    const audio = new Sound(`audio`, `audio.mp3`, scene, () => {
+        audioReady = true;
+        if (audioPlayWhenReady) {
+            audio.play();
+        }
+    }, {
+        autoplay: false,
+        streaming: true
     });
 
-    // scoreMeshTransform.position.y -= 10;
+    scene.onBeforeRenderingGroupObservable.add((groupInfo) => {
+        if (audio.isPlaying) {
+            scoreMeshTransform.position.y = -(audio.currentTime / 4) - 0.6;
+        }
+    });
 })();
