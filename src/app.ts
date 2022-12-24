@@ -357,6 +357,7 @@ import * as scoreJson from "./score.json"
                 }
 
                 if (audioReady) {
+                    Engine.audioEngine.audioContext.resume();
                     audio.play();
                 }
                 else {
@@ -449,6 +450,7 @@ import * as scoreJson from "./score.json"
     const audio = new Sound(`audio`, `audio.mp3`, scene, () => {
         audioReady = true;
         if (audioPlayWhenReady) {
+            Engine.audioEngine.audioContext.resume();
             audio.play();
         }
     }, {
