@@ -385,29 +385,25 @@ import * as scoreJson from "./score.json"
     }
 
     const createNoteMesh = (onTime: number, duration: number, angle: number): Mesh[] => {
-        const mesh = MeshBuilder.CreateCylinder(`noteMesh.prototype`, {
-            height: duration,
-            diameterBottom: 1,
-            diameterTop: 0 // 1 - duration / maxNoteDuration
+        const mesh = MeshBuilder.CreateLathe(`noteMesh`, {
+            shape: [
+                new Vector3(0, 0, 0),
+                new Vector3(0.5, 0.01, 0),
+                new Vector3(0, duration, 0)
+            ],
+            closed: true,
+            updatable: false,
+            tessellation: 3
         });
         mesh.position.x = pianoKeys.radius - 2;
-        mesh.position.y = onTime + duration / 2;
+        mesh.position.y = onTime // + duration / 2;
         mesh.rotateAround(Vector3.ZeroReadOnly, Vector3.UpReadOnly, angle);
         mesh.bakeCurrentTransformIntoVertices();
         mesh.scaling.copyFrom(pianoKeys.scaling);
-        mesh.scaling.y = 0.5;
+        mesh.scaling.y = 0.25;
         mesh.bakeCurrentTransformIntoVertices();
 
-        const sphere = MeshBuilder.CreateSphere(``, { segments: 8 });
-        sphere.position.x = pianoKeys.radius - 2
-        sphere.position.y = onTime * 28.575; // TODO: Fix this. It's off. It gets further behind as onTime increases.
-        sphere.scaling.setAll(1.1);
-        sphere.rotateAround(Vector3.ZeroReadOnly, Vector3.UpReadOnly, angle);
-        sphere.bakeCurrentTransformIntoVertices();
-        sphere.scaling.copyFrom(pianoKeys.scaling);
-        sphere.bakeCurrentTransformIntoVertices();
-
-        return [ mesh, sphere ];
+        return [ mesh ];
     }
 
     for (let i = 0; i < scoreNotes.length; i++) {
