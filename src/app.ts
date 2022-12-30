@@ -36,6 +36,9 @@ import { PianoKeys } from "./pianoKeys"
 import * as scoreJson from "./score.json"
 
 (async () => {
+    let audioPlayWhenReady = false;
+    let audioReady = false;
+
     //#region Setup engine and scene
 
     const canvas = <HTMLCanvasElement>document.getElementById("MainCanvas");
@@ -102,6 +105,7 @@ import * as scoreJson from "./score.json"
         public isVertical = false;
     }
 
+    const planeMeshes = new Array<AbstractMesh>();
     const planeMeshMap = new Map<AbstractMesh, PlaneContext>();
 
     if (useWebXR) {
@@ -120,6 +124,7 @@ import * as scoreJson from "./score.json"
             planeContext.mesh = mesh;
 
             xrPlaneMap.set(plane, planeContext);
+            planeMeshes.push(mesh);
             planeMeshMap.set(mesh, planeContext);
 
             const material = new StandardMaterial("Wall.material", scene);
@@ -179,6 +184,7 @@ import * as scoreJson from "./score.json"
                 planeContext.mesh.dispose();
             });
             xrPlaneMap.clear();
+            planeMeshes.length = 0;
             planeMeshMap.clear();
         });
     }
@@ -242,6 +248,7 @@ import * as scoreJson from "./score.json"
             const planeContext = new PlaneContext;
             planeContext.mesh = wall;
             planeContext.isVertical = true;
+            planeMeshes.push(wall);
             planeMeshMap.set(wall, planeContext);
         }
     }
@@ -309,6 +316,61 @@ import * as scoreJson from "./score.json"
 
     //#region Pointer processing
 
+    const onPick = (pickedMesh, pickedPoint, updateClipPlane = true) => {
+        const planeContext = planeMeshMap.get(pickedMesh);
+        if (!planeContext.isVertical) {
+            console.debug(`Plane orientation is not vertical.`);
+            return;
+        }
+
+        // // TODO: Add logic to keep frame from overlapping with floor, ceiling or another wall.
+
+        if (useWebXR) {
+            frameTransform.scaling.setAll(1);
+            frameTransform.position.copyFrom(pickedPoint);
+        }
+        else {
+            frameTransform.scaling.setAll(4);
+            frameTransform.position.copyFrom(pickedPoint);
+            frameTransform.position.y = 2;
+        }
+        const vertices = pickedMesh.getVerticesData(VertexBuffer.PositionKind);
+        if (updateClipPlane) {
+            clipPlane.copyFromPoints(
+                Vector3.TransformCoordinates(new Vector3(vertices[0], vertices[1], vertices[2]), pickedMesh.getWorldMatrix()),
+                Vector3.TransformCoordinates(new Vector3(vertices[3], vertices[4], vertices[5]), pickedMesh.getWorldMatrix()),
+                Vector3.TransformCoordinates(new Vector3(vertices[6], vertices[7], vertices[8]), pickedMesh.getWorldMatrix())
+            )
+        }
+        if (pickedMesh.rotationQuaternion) {
+            if (!frameTransform.rotationQuaternion) {
+                frameTransform.rotationQuaternion = pickedMesh.rotationQuaternion.clone();
+            }
+            else {
+                frameTransform.rotationQuaternion.copyFrom(pickedMesh.rotationQuaternion);
+            }
+        }
+        else {
+            frameTransform.rotation.copyFrom(pickedMesh.rotation);
+            if (updateClipPlane) {
+                Vector3.TransformCoordinatesToRef(clipPlane.normal, frameTransform.getWorldMatrix(), clipPlane.normal);
+            }
+        }
+
+        if (audioReady) {
+            Engine.audioEngine.audioContext.resume();
+            audio.play();
+        }
+        else {
+            audioPlayWhenReady = true;
+        }
+    }
+
+    if (!useWebXR) {
+        const wall = planeMeshes[2];
+        onPick(wall, wall.position, false);
+    }
+
     scene.onPointerObservable.add((pointerInfo) => {
         switch (pointerInfo.type) {
             case PointerEventTypes.POINTERDOWN:
@@ -320,50 +382,7 @@ import * as scoreJson from "./score.json"
                     console.debug(`Picked plane mesh (\"${pickedMesh.name}\") not found in planeMeshMap.`);
                     return;
                 }
-                const planeContext = planeMeshMap.get(pickedMesh);
-                if (!planeContext.isVertical) {
-                    console.debug(`Plane orientation is not vertical.`);
-                    return;
-                }
-
-                // TODO: Add logic to keep frame from overlapping with floor, ceiling or another wall.
-
-                if (useWebXR) {
-                    frameTransform.scaling.setAll(1);
-                    frameTransform.position.copyFrom(pointerInfo.pickInfo.pickedPoint);
-                }
-                else {
-                    frameTransform.scaling.setAll(4);
-                    frameTransform.position.copyFrom(pointerInfo.pickInfo.pickedPoint);
-                    frameTransform.position.y = 2;
-                }
-                const vertices = pickedMesh.getVerticesData(VertexBuffer.PositionKind);
-                clipPlane.copyFromPoints(
-                    Vector3.TransformCoordinates(new Vector3(vertices[0], vertices[1], vertices[2]), pickedMesh.getWorldMatrix()),
-                    Vector3.TransformCoordinates(new Vector3(vertices[3], vertices[4], vertices[5]), pickedMesh.getWorldMatrix()),
-                    Vector3.TransformCoordinates(new Vector3(vertices[6], vertices[7], vertices[8]), pickedMesh.getWorldMatrix())
-                )
-                if (pickedMesh.rotationQuaternion) {
-                    if (!frameTransform.rotationQuaternion) {
-                        frameTransform.rotationQuaternion = pickedMesh.rotationQuaternion.clone();
-                    }
-                    else {
-                        frameTransform.rotationQuaternion.copyFrom(pickedMesh.rotationQuaternion);
-                    }
-                }
-                else {
-                    frameTransform.rotation.copyFrom(pickedMesh.rotation);
-                    Vector3.TransformCoordinatesToRef(clipPlane.normal, frameTransform.getWorldMatrix(), clipPlane.normal);
-                }
-
-                if (audioReady) {
-                    Engine.audioEngine.audioContext.resume();
-                    audio.play();
-                }
-                else {
-                    audioPlayWhenReady = true;
-                }
-
+                onPick(pickedMesh, pointerInfo.pickInfo.pickedPoint);
                 break;
         }
     });
@@ -426,9 +445,6 @@ import * as scoreJson from "./score.json"
     const scoreMeshOutOfFrame = scoreMeshInFrame.clone(`scoreMeshOutOfFrame`);
     scoreMeshOutOfFrame.parent = scoreMeshTransform;
     scoreMeshOutOfFrame.renderingGroupId = 3;
-
-    let audioPlayWhenReady = false;
-    let audioReady = false;
 
     const audio = new Sound(`audio`, `audio.mp3`, scene, () => {
         audioReady = true;
