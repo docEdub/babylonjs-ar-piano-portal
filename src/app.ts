@@ -377,23 +377,6 @@ import * as scoreJson from "./score.json"
 
     const scoreNotes = scoreJson.score;
 
-    let maxNoteDuration = 0;
-
-    // Trim overlapping notes and find max note duration.
-    for (let i = 0; i < scoreNotes.length; i++) {
-        const note = scoreNotes[i].note;
-        for (let j = i + 1; j < scoreNotes.length; j++) {
-            const futureNote = scoreNotes[j].note;
-            if (futureNote.pitch === note.pitch && futureNote.onTime < note.offTime) {
-                note.offTime = futureNote.onTime;
-                break;
-            }
-            if (note.offTime <= scoreNotes[j].note.onTime) {
-                break;
-            }
-        }
-        maxNoteDuration = Math.max(maxNoteDuration, note.offTime - note.onTime);
-    }
 
     const createNoteMesh = (onTime: number, duration: number, angle: number): Mesh[] => {
         const mesh = MeshBuilder.CreateLathe(`noteMesh`, {
