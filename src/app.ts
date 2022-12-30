@@ -406,7 +406,7 @@ import * as scoreJson from "./score.json"
             updatable: false,
             tessellation: 3
         });
-        mesh.position.x = pianoKeys.radius - 2;
+        mesh.position.x = pianoKeys.radius - 1.5;
         mesh.position.y = onTime // + duration / 2;
         mesh.rotateAround(Vector3.ZeroReadOnly, Vector3.UpReadOnly, angle);
         mesh.bakeCurrentTransformIntoVertices();
