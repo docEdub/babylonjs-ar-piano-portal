@@ -279,6 +279,7 @@ import * as scoreJson from "./score.json"
     framePlaneMesh.bakeCurrentTransformIntoVertices();
     framePlaneMesh.isPickable = false;
     framePlaneMesh.parent = frameTransform;
+    framePlaneMesh.alwaysSelectAsActiveMesh = true; // Need this to keep the night sky box from showing when frame mesh goes out of view.
     const framePlaneMaterial = new StandardMaterial(`Frame.material`);
     framePlaneMaterial.disableDepthWrite = true;
     framePlaneMesh.material = framePlaneMaterial;
