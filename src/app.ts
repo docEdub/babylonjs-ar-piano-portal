@@ -392,7 +392,7 @@ import * as scoreJson from "./score.json"
 
     const noteMeshes = [];
 
-    const pianoKeys = new PianoKeys;
+    const pianoKeys = new PianoKeys(scene);
     pianoKeys.parent = frameTransform;
 
     const scoreNotes = scoreJson.score;
@@ -457,11 +457,14 @@ import * as scoreJson from "./score.json"
         autoplay: false,
         streaming: true
     });
+    Engine.audioEngine.onAudioUnlockedObservable.add(() => {
+        audio.play();
+    })
 
     let noteOnIndex = 0;
-    let noteOffIndex = 0;
+    let previousTime = 0;
 
-    scene.onBeforeRenderingGroupObservable.add((groupInfo) => {
+    scene.onBeforeRenderObservable.add(() => {
         if (audio.isPlaying) {
             scoreMeshTransform.position.y = -(audio.currentTime / 4) - 0.6;
 
@@ -471,21 +474,11 @@ import * as scoreJson from "./score.json"
                 if (time < note.onTime) {
                     break;
                 }
-                if (time < note.offTime) {
-                    pianoKeys.noteOn(note.pitch);
-                }
+                pianoKeys.noteOn(note.pitch, note.offTime - note.onTime);
                 noteOnIndex++;
             }
-            while (noteOffIndex < scoreNotes.length) {
-                const note = scoreNotes[noteOffIndex].note
-                if (time < note.offTime) {
-                    break;
-                }
-                if (note.offTime <= time) {
-                    pianoKeys.noteOff(note.pitch);
-                }
-                noteOffIndex++;
-            }
+            pianoKeys.render(audio.currentTime - previousTime);
+            previousTime = audio.currentTime;
         }
     });
 })();

@@ -1,6 +1,6 @@
 
 MIDI file:
-https://www.piano-e-competition.com/midi_2002.asp
+http://www.piano-midi.de/chopin.htm
 
 Babylon.js Piano tutorial:
 https://learn.microsoft.com/en-us/windows/mixed-reality/develop/javascript/tutorials/babylonjs-webxr-piano/keyboard-interaction-03

@@ -8,8 +8,11 @@ import {
     Vector3,
 } from "@babylonjs/core";
 
+const whiteKeyDepth = 10;
+const blackKeyDepth = 8.75;
+
 export class PianoKeys extends TransformNode {
-    constructor() {
+    constructor(scene) {
         super(`PianoKeys`);
 
         const keyTopGap = 20
@@ -45,10 +48,10 @@ export class PianoKeys extends TransformNode {
                 */
 
                 // Create bottom part
-                const bottom = MeshBuilder.CreateBox("whiteKeyBottom", {width: props.bottomWidth, height: 1.5, depth: 10});
+                const bottom = MeshBuilder.CreateBox("whiteKeyBottom", {width: props.bottomWidth, height: 1.5, depth: whiteKeyDepth});
 
                 // Create top part
-                const top = MeshBuilder.CreateBox("whiteKeyTop", {width: props.topWidth, height: 1.5, depth: 8.75});
+                const top = MeshBuilder.CreateBox("whiteKeyTop", {width: props.topWidth, height: 1.5, depth: blackKeyDepth});
                 top.position.z =  4.75;
                 top.position.x += props.topPositionX;
 
@@ -61,7 +64,7 @@ export class PianoKeys extends TransformNode {
                 key.rotateAround(Vector3.ZeroReadOnly, Vector3.LeftHandedForwardReadOnly, angle);
                 key.name = props.note + props.register;
 
-                return { isWhite: true, mesh: key, angle: angle, note: `${props.note}${props.register}`, position: key.position, rotation: key.rotationQuaternion, litInstance: null };
+                return { isWhite: true, mesh: key, angle: angle, note: `${props.note}${props.register}`, position: key.position, rotation: key.rotationQuaternion, litInstance: null, duration: 0, timeRemaining: 0 };
             }
             else if (props.type === "black") {
                 /*
@@ -73,14 +76,14 @@ export class PianoKeys extends TransformNode {
                 */
 
                 // Create black key
-                const key = MeshBuilder.CreateBox(props.note + props.register, {width: 1.4, height: 3, depth: 8.75});
+                const key = MeshBuilder.CreateBox(props.note + props.register, {width: 1.4, height: 3, depth: blackKeyDepth});
                 key.position.z = 4.75;
                 key.position.y = -keyRadius;
                 const keyX = props.referencePositionX + props.wholePositionX;
                 const angle = keyAngle(keyX);
                 key.rotateAround(Vector3.ZeroReadOnly, Vector3.LeftHandedForwardReadOnly, angle);
 
-                return { isWhite: false, mesh: key, angle: angle, note: `${props.note}${props.register}`, position: key.position, rotation: key.rotationQuaternion, litInstance: null };
+                return { isWhite: false, mesh: key, angle: angle, note: `${props.note}${props.register}`, position: key.position, rotation: key.rotationQuaternion, litInstance: null, duration: 0, timeRemaining: 0 };
             }
         }
 
@@ -200,12 +203,25 @@ export class PianoKeys extends TransformNode {
         return this._keys[midiNoteNumber].angle;
     }
 
-    public noteOn(noteNumber) {
-        this._keys[noteNumber].litInstance.isVisible = true;
+    public noteOn(noteNumber, duration) {
+        const key = this._keys[noteNumber];
+        key.timeRemaining = key.duration = duration;
+        key.litInstance.isVisible = true;
+        key.litInstance.scaling.z = 1;
+        key.litInstance.position.z = 0;
     }
 
-    public noteOff(noteNumber) {
-        this._keys[noteNumber].litInstance.isVisible = false;
+    public render(deltaTime) {
+        this._keys.forEach((key) => {
+            if (0 < key.timeRemaining) {
+                key.litInstance.scaling.z = key.timeRemaining / key.duration;
+                key.litInstance.position.z = -0.01 - (1 - key.litInstance.scaling.z) * (key.isWhite ? whiteKeyDepth : blackKeyDepth) / 2;
+                key.timeRemaining -= deltaTime;
+                if (key.timeRemaining <= 0) {
+                    key.litInstance.isVisible = false;
+                }
+            }
+        });
     }
 
     private _keys = [];
