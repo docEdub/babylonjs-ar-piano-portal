@@ -17,7 +17,7 @@ export class PianoKeys extends TransformNode {
 
         const keyTopGap = 20
         const keyOffsetX = 52.8 + keyTopGap / 2;
-        const keyRadius = 24 //19.862536897868538;
+        const keyRadius = 24
         const keyCircumference = 122.4 + keyTopGap;
 
         const whiteMaterial = new StandardMaterial(`pianoKeys.whiteMaterial`);
@@ -39,24 +39,12 @@ export class PianoKeys extends TransformNode {
 
         const buildKey = function (parent, props) {
             if (props.type === "white") {
-                /*
-                Props for building a white key should contain:
-                note, topWidth, bottomWidth, topPositionX, wholePositionX, register, referencePositionX
-
-                As an example, the props for building the middle C white key would be
-                {type: "white", note: "C", topWidth: 1.4, bottomWidth: 2.3, topPositionX: -0.45, wholePositionX: -14.4, register: 4, referencePositionX: 0}
-                */
-
-                // Create bottom part
                 const bottom = MeshBuilder.CreateBox("whiteKeyBottom", {width: props.bottomWidth, height: 1.5, depth: whiteKeyDepth});
 
-                // Create top part
                 const top = MeshBuilder.CreateBox("whiteKeyTop", {width: props.topWidth, height: 1.5, depth: blackKeyDepth});
                 top.position.z =  4.75;
                 top.position.x += props.topPositionX;
 
-                // Merge bottom and top parts
-                // Parameters of Mesh.MergeMeshes: (arrayOfMeshes, disposeSource, allow32BitsIndices, meshSubclass, subdivideWithSubMeshes, multiMultiMaterials)
                 const key = Mesh.MergeMeshes([bottom, top], true, false, null, false, false);
                 const keyX = props.referencePositionX + props.wholePositionX;
                 const angle = keyAngle(keyX);
@@ -67,15 +55,6 @@ export class PianoKeys extends TransformNode {
                 return { isWhite: true, mesh: key, angle: angle, note: `${props.note}${props.register}`, position: key.position, rotation: key.rotationQuaternion, litInstance: null, duration: 0, timeRemaining: 0 };
             }
             else if (props.type === "black") {
-                /*
-                Props for building a black key should contain:
-                note, wholePositionX, register, referencePositionX
-
-                As an example, the props for building the C#4 black key would be
-                {type: "black", note: "C#", wholePositionX: -13.45, register: 4, referencePositionX: 0}
-                */
-
-                // Create black key
                 const key = MeshBuilder.CreateBox(props.note + props.register, {width: 1.4, height: 3, depth: blackKeyDepth});
                 key.position.z = 4.75;
                 key.position.y = -keyRadius;
