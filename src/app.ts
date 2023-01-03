@@ -1,6 +1,5 @@
 import {
     AbstractMesh,
-    AudioEngine,
     Color3,
     CubeTexture,
     Engine,
@@ -8,7 +7,6 @@ import {
     HemisphericLight,
     IWebXRPlane,
     Material,
-    Matrix,
     Mesh,
     MeshBuilder,
     Plane,
@@ -394,7 +392,7 @@ import * as scoreJson from "./score.json"
 
     const noteMeshes = [];
 
-    const pianoKeys = new PianoKeys(scene);
+    const pianoKeys = new PianoKeys;
     pianoKeys.parent = frameTransform;
 
     const scoreNotes = scoreJson.score;

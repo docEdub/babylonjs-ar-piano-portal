@@ -1,18 +1,19 @@
 import {
-    Color3,
     Mesh,
     MeshBuilder,
-    Quaternion,
     StandardMaterial,
     TransformNode,
     Vector3,
 } from "@babylonjs/core";
 
+
+// Adapted from the piano model tutorial at https://learn.microsoft.com/en-us/windows/mixed-reality/develop/javascript/tutorials/babylonjs-webxr-piano/keyboard-model-02.
+
 const whiteKeyDepth = 10;
 const blackKeyDepth = 8.75;
 
 export class PianoKeys extends TransformNode {
-    constructor(scene) {
+    constructor() {
         super(`PianoKeys`);
 
         const keyTopGap = 20
