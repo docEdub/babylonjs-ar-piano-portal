@@ -372,21 +372,23 @@ import * as scoreJson from "./score.json"
         onPick(wall, wall.position, false);
     }
 
-    scene.onPointerObservable.add((pointerInfo) => {
-        switch (pointerInfo.type) {
-            case PointerEventTypes.POINTERDOWN:
-                const pickedMesh = pointerInfo.pickInfo.pickedMesh;
-                if (!pickedMesh) {
-                    return;
-                }
-                if (!planeMeshMap.has(pickedMesh)) {
-                    console.debug(`Picked plane mesh (\"${pickedMesh.name}\") not found in planeMeshMap.`);
-                    return;
-                }
-                onPick(pickedMesh, pointerInfo.pickInfo.pickedPoint);
-                break;
-        }
-    });
+    if (useWebXR) {
+        scene.onPointerObservable.add((pointerInfo) => {
+            switch (pointerInfo.type) {
+                case PointerEventTypes.POINTERDOWN:
+                    const pickedMesh = pointerInfo.pickInfo.pickedMesh;
+                    if (!pickedMesh) {
+                        return;
+                    }
+                    if (!planeMeshMap.has(pickedMesh)) {
+                        console.debug(`Picked plane mesh (\"${pickedMesh.name}\") not found in planeMeshMap.`);
+                        return;
+                    }
+                    onPick(pickedMesh, pointerInfo.pickInfo.pickedPoint);
+                    break;
+            }
+        });
+    }
 
     //#endregion
 
