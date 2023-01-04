@@ -208,6 +208,7 @@ import * as scoreJson from "./score.json"
 
         let daySkyBox = MeshBuilder.CreateBox(`daySkyBox`, { size:1000 }, scene);
         daySkyBox.renderingGroupId = 0;
+        daySkyBox.isPickable = false;
         let daySkyBoxMaterial = new StandardMaterial(`daySkyBoxMaterial`, scene);
         daySkyBoxMaterial.backFaceCulling = false;
         daySkyBoxMaterial.reflectionTexture = new CubeTexture("skyboxes/day/", scene);
@@ -256,6 +257,7 @@ import * as scoreJson from "./score.json"
     nightSkyBox.renderingGroupId = 2;
     nightSkyBox.rotation.y = Math.PI / 2;
     nightSkyBox.rotation.z = -Math.PI / 2;
+    nightSkyBox.isPickable = false;
     let nightSkyBoxMaterial = new StandardMaterial(`nightSkyBoxMaterial`, scene);
     nightSkyBoxMaterial.backFaceCulling = false;
     nightSkyBoxMaterial.reflectionTexture = new CubeTexture("skyboxes/night/", scene);
