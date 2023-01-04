@@ -2,6 +2,7 @@ import {
     AbstractMesh,
     Color3,
     CubeTexture,
+    DynamicTexture,
     Engine,
     FreeCamera,
     HemisphericLight,
@@ -92,8 +93,8 @@ import * as scoreJson from "./score.json"
     //#endregion
 
     // TODO: See if light estimation can work for WebXR experience instead using the stock hemispheric light.
-    const light = new HemisphericLight(`light`, new Vector3(0, 1, 0), scene);
-    light.intensity = 0.7;
+    const light = new HemisphericLight(`light`, new Vector3(0, 1, 0.1), scene);
+    light.intensity = 0.9;
 
     //#region Room setup plane processing
     // See https://playground.babylonjs.com/#98TM63.
@@ -481,4 +482,37 @@ import * as scoreJson from "./score.json"
             previousTime = audio.currentTime;
         }
     });
+
+    const descriptionMesh = MeshBuilder.CreatePlane(`descriptionMesh`, { width: 1, height: 0.25 });
+    descriptionMesh.position.x = -0.9;
+    descriptionMesh.rotation.x = -Math.PI / 2;
+    descriptionMesh.scaling.setAll(0.5);
+    descriptionMesh.parent = frameTransform;
+    const descriptionMaterial = new StandardMaterial(`descriptionMaterial`);
+    descriptionMesh.material = descriptionMaterial;
+    {
+        const font = "bold 12px arial";
+
+        const text1 = "Chopin's Étude Opus 25 No. 11, “Winter Wind” in A Minor";
+        const text2 = "MIDI file by Bernd Krueger (CC BY-SA 3.0 DE)";
+        const text3 = "Visualization by Andy Fillebrown.";
+     
+        const descriptionTexture = new DynamicTexture(`Description texture`, { width:512, height:128}, scene);
+        descriptionMaterial.diffuseTexture = descriptionTexture;
+
+        const ctx = descriptionTexture.getContext();
+        ctx.font = font;
+        const textWidth = ctx.measureText(text1).width;
+        const ratio = textWidth / 12; // font size px
+        const actualFontSize = Math.floor(448 / (ratio * 1)); // 512 == texture width, 448 == texture width with room for padding.
+        ctx.fillStyle = `#fff`;
+        ctx.fillRect(0, 0, 512, 128);
+        ctx.fillStyle = `#000`;
+        ctx.font = `bold ${actualFontSize}px arial`;
+        ctx.fillText(text1, 16, 32);
+        ctx.font = `${actualFontSize}px arial`;
+        ctx.fillText(text2, 16, 72);
+        ctx.fillText(text3, 16, 104);
+        descriptionTexture.update();
+    }
 })();
