@@ -1,7 +1,8 @@
 {
   "scripts": {
-    "build": "webpack",
-    "start": "webpack serve"
+    "build": "webpack --env mode=production",
+    "build:dev": "webpack --env mode=development",
+    "start": "webpack serve --env mode=development"
   },
   "devDependencies": {
     "clean-webpack-plugin": "^4.0.0",
@@ -17,6 +18,7 @@
   "dependencies": {
     "@babylonjs/core": "^5.32.2",
     "@babylonjs/loaders": "^5.32.2",
+    "copy-webpack-plugin": "^11.0.0",
     "earcut": "^2.2.4"
   }
 }
