@@ -2,7 +2,7 @@
 
 An augmented-reality WebXR animation of Chopin's "Winter Wind" Étude to hang on your wall! Works on flat-screen, too.
 
-See it live at https://andy.docEdub.com/piano-portal/.
+See it live at https://demos.babylonjs.com/piano-portal/.
 
 For the WebXR version, use a Meta Quest 2 or Quest Pro with passthrough turned on and setup your room's walls with the Room Setup configuration tool found in the experimental settings.
 
