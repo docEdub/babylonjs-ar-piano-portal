@@ -210,7 +210,7 @@ import * as scoreJson from "./score.json"
         daySkyBox.isPickable = false;
         let daySkyBoxMaterial = new StandardMaterial(`daySkyBoxMaterial`, scene);
         daySkyBoxMaterial.backFaceCulling = false;
-        daySkyBoxMaterial.reflectionTexture = new CubeTexture("skyboxes/day/", scene);
+        daySkyBoxMaterial.reflectionTexture = new CubeTexture("skyboxes/day", scene);
         daySkyBoxMaterial.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
         daySkyBoxMaterial.diffuseColor = new Color3(0, 0, 0);
         daySkyBoxMaterial.specularColor = new Color3(0, 0, 0);
@@ -259,7 +259,7 @@ import * as scoreJson from "./score.json"
     nightSkyBox.isPickable = false;
     let nightSkyBoxMaterial = new StandardMaterial(`nightSkyBoxMaterial`, scene);
     nightSkyBoxMaterial.backFaceCulling = false;
-    nightSkyBoxMaterial.reflectionTexture = new CubeTexture("skyboxes/night/", scene);
+    nightSkyBoxMaterial.reflectionTexture = new CubeTexture("skyboxes/night", scene);
     nightSkyBoxMaterial.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
     nightSkyBoxMaterial.diffuseColor = new Color3(0, 0, 0);
     nightSkyBoxMaterial.specularColor = new Color3(0, 0, 0);
