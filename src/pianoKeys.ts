@@ -39,10 +39,10 @@ export class PianoKeys extends TransformNode {
         }
 
         const buildKey = function (props) {
-            if (props.type === "white") {
-                const bottom = MeshBuilder.CreateBox("whiteKeyBottom", {width: props.bottomWidth, height: 1.5, depth: whiteKeyDepth});
+            if (props.type === `white`) {
+                const bottom = MeshBuilder.CreateBox(`whiteKeyBottom`, {width: props.bottomWidth, height: 1.5, depth: whiteKeyDepth});
 
-                const top = MeshBuilder.CreateBox("whiteKeyTop", {width: props.topWidth, height: 1.5, depth: blackKeyDepth});
+                const top = MeshBuilder.CreateBox(`whiteKeyTop`, {width: props.topWidth, height: 1.5, depth: blackKeyDepth});
                 top.position.z =  4.75;
                 top.position.x += props.topPositionX;
 
@@ -55,7 +55,7 @@ export class PianoKeys extends TransformNode {
 
                 return { isWhite: true, mesh: key, angle: angle, note: `${props.note}${props.register}`, position: key.position, rotation: key.rotationQuaternion, litInstance: null, duration: 0, timeRemaining: 0 };
             }
-            else if (props.type === "black") {
+            else if (props.type === `black`) {
                 const key = MeshBuilder.CreateBox(props.note + props.register, {width: 1.4, height: 3, depth: blackKeyDepth});
                 key.position.z = 4.75;
                 key.position.y = -keyRadius;
@@ -68,18 +68,18 @@ export class PianoKeys extends TransformNode {
         }
 
         const keyParams = [
-            {type: "white", note: "C", topWidth: 1.4, bottomWidth: 2.3, topPositionX: -0.45, wholePositionX: -14.4},
-            {type: "black", note: "C#", wholePositionX: -13.45},
-            {type: "white", note: "D", topWidth: 1.4, bottomWidth: 2.4, topPositionX: 0, wholePositionX: -12},
-            {type: "black", note: "D#", wholePositionX: -10.6},
-            {type: "white", note: "E", topWidth: 1.4, bottomWidth: 2.3, topPositionX: 0.45, wholePositionX: -9.6},
-            {type: "white", note: "F", topWidth: 1.3, bottomWidth: 2.4, topPositionX: -0.55, wholePositionX: -7.2},
-            {type: "black", note: "F#", wholePositionX: -6.35},
-            {type: "white", note: "G", topWidth: 1.3, bottomWidth: 2.3, topPositionX: -0.2, wholePositionX: -4.8},
-            {type: "black", note: "G#", wholePositionX: -3.6},
-            {type: "white", note: "A", topWidth: 1.3, bottomWidth: 2.3, topPositionX: 0.2, wholePositionX: -2.4},
-            {type: "black", note: "A#", wholePositionX: -0.85},
-            {type: "white", note: "B", topWidth: 1.3, bottomWidth: 2.4, topPositionX: 0.55, wholePositionX: 0},
+            {type: `white`, note: `C`, topWidth: 1.4, bottomWidth: 2.3, topPositionX: -0.45, wholePositionX: -14.4},
+            {type: `black`, note: `C#`, wholePositionX: -13.45},
+            {type: `white`, note: `D`, topWidth: 1.4, bottomWidth: 2.4, topPositionX: 0, wholePositionX: -12},
+            {type: `black`, note: `D#`, wholePositionX: -10.6},
+            {type: `white`, note: `E`, topWidth: 1.4, bottomWidth: 2.3, topPositionX: 0.45, wholePositionX: -9.6},
+            {type: `white`, note: `F`, topWidth: 1.3, bottomWidth: 2.4, topPositionX: -0.55, wholePositionX: -7.2},
+            {type: `black`, note: `F#`, wholePositionX: -6.35},
+            {type: `white`, note: `G`, topWidth: 1.3, bottomWidth: 2.3, topPositionX: -0.2, wholePositionX: -4.8},
+            {type: `black`, note: `G#`, wholePositionX: -3.6},
+            {type: `white`, note: `A`, topWidth: 1.3, bottomWidth: 2.3, topPositionX: 0.2, wholePositionX: -2.4},
+            {type: `black`, note: `A#`, wholePositionX: -0.85},
+            {type: `white`, note: `B`, topWidth: 1.3, bottomWidth: 2.4, topPositionX: 0.55, wholePositionX: 0},
         ]
 
         let midiNoteNumber = 21; // Lowest A key on 88 key piano.
@@ -89,7 +89,7 @@ export class PianoKeys extends TransformNode {
 
         // Register 0
         {
-            const builtKey = buildKey({type: "white", note: "A", topWidth: 1.9, bottomWidth: 2.3, topPositionX: -0.20, wholePositionX: -2.4, register: 0, referencePositionX: -2.4 * 21});
+            const builtKey = buildKey({type: `white`, note: `A`, topWidth: 1.9, bottomWidth: 2.3, topPositionX: -0.20, wholePositionX: -2.4, register: 0, referencePositionX: -2.4 * 21});
             this._keys[midiNoteNumber++] = builtKey;
             whiteKeyMeshes.push(builtKey.mesh);
 
@@ -97,7 +97,7 @@ export class PianoKeys extends TransformNode {
                 const builtKey = buildKey(Object.assign({register: 0, referencePositionX: -2.4 * 21}, key));
                 this._keys[midiNoteNumber++] = builtKey;
 
-                if (key.type == "white") {
+                if (key.type == `white`) {
                     whiteKeyMeshes.push(builtKey.mesh);
                 }
                 else {
@@ -114,7 +114,7 @@ export class PianoKeys extends TransformNode {
                     const builtKey = buildKey(Object.assign({register: register, referencePositionX: referencePositionX}, key));
                     this._keys[midiNoteNumber++] = builtKey;
 
-                    if (key.type == "white") {
+                    if (key.type == `white`) {
                         whiteKeyMeshes.push(builtKey.mesh);
                     }
                     else {
@@ -127,7 +127,7 @@ export class PianoKeys extends TransformNode {
 
         // Register 8
         {
-            const builtKey = buildKey({type: "white", note: "C", topWidth: 2.3, bottomWidth: 2.3, topPositionX: 0, wholePositionX: -2.4*6, register: 8, referencePositionX: 84});
+            const builtKey = buildKey({type: `white`, note: `C`, topWidth: 2.3, bottomWidth: 2.3, topPositionX: 0, wholePositionX: -2.4*6, register: 8, referencePositionX: 84});
             this._keys[midiNoteNumber++] = builtKey;
             whiteKeyMeshes.push(builtKey.mesh);
         }
@@ -150,13 +150,13 @@ export class PianoKeys extends TransformNode {
 
         // Create lit instances.
 
-        const whiteLitSource = buildKey({type: "white", note: "C", topWidth: 2.3, bottomWidth: 2.3, topPositionX: 0, wholePositionX: -2.4*6, register: 8, referencePositionX: 84}).mesh;
+        const whiteLitSource = buildKey({type: `white`, note: `C`, topWidth: 2.3, bottomWidth: 2.3, topPositionX: 0, wholePositionX: -2.4*6, register: 8, referencePositionX: 84}).mesh;
         whiteLitSource.material = litMaterial;
         whiteLitSource.renderingGroupId = 2;
         whiteLitSource.parent = this;
         whiteLitSource.isVisible = false;
 
-        const blackLitSource = buildKey({type: "black", note: "A#", wholePositionX: -0.85}).mesh;
+        const blackLitSource = buildKey({type: `black`, note: `A#`, wholePositionX: -0.85}).mesh;
         blackLitSource.material = litMaterial;
         blackLitSource.renderingGroupId = 2;
         blackLitSource.parent = this;

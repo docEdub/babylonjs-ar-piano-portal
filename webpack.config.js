@@ -6,8 +6,6 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const appDirectory = fs.realpathSync(process.cwd());
 
 module.exports = (env) => {
-    console.log(env);
-
     const exports = {
         entry: path.resolve(appDirectory, "src/app.ts"),
         output: {

@@ -30,14 +30,14 @@ import {
 
 import "@babylonjs/loaders";
 import earcut from "earcut";
-import { PianoKeys } from "./pianoKeys"
 
+import { PianoKeys } from "./pianoKeys"
 import * as scoreJson from "./score.json"
 
 (async () => {
-    let audioPlayWhenReady = false;
     let audioReady = false;
-
+    let audioPlayWhenReady = false;
+    
     //#region Setup engine and scene
 
     const canvas = <HTMLCanvasElement>document.getElementById("MainCanvas");
@@ -53,6 +53,10 @@ import * as scoreJson from "./score.json"
             scene.render()
         }
     })
+
+    // TODO: See if light estimation can work for WebXR experience instead.
+    const light = new HemisphericLight(`light`, new Vector3(0, 1, 0.1), scene);
+    light.intensity = 0.9;
 
     //#endregion
 
@@ -91,10 +95,6 @@ import * as scoreJson from "./score.json"
     }
 
     //#endregion
-
-    // TODO: See if light estimation can work for WebXR experience instead using the stock hemispheric light.
-    const light = new HemisphericLight(`light`, new Vector3(0, 1, 0.1), scene);
-    light.intensity = 0.9;
 
     //#region Room setup plane processing
     // See https://playground.babylonjs.com/#98TM63.
@@ -267,7 +267,7 @@ import * as scoreJson from "./score.json"
 
     //#endregion
 
-    //#region Magic portal
+    //#region Magic portal frame
 
     const frameTransform = new TransformNode("Frame.transform");
     frameTransform.scaling.setAll(0);
@@ -287,7 +287,6 @@ import * as scoreJson from "./score.json"
     // Use `framePlaneMesh` as a stencil so nothing gets drawn outside of it.
     // This creates the magic portal effect.
     framePlaneMesh.renderingGroupId = 1;
-    // cylinder.renderingGroupId = 2;
     scene.setRenderingAutoClearDepthStencil(2, false);
     scene.setRenderingAutoClearDepthStencil(3, true);
     engine.setStencilBuffer(true);
@@ -297,7 +296,6 @@ import * as scoreJson from "./score.json"
                 engine.setDepthFunction(Engine.LESS);
                 engine.setStencilFunction(Engine.EQUAL);
                 break;
-            // case 0:
             case 3:
                 scene.clipPlane = clipPlane;
             default:
@@ -307,7 +305,6 @@ import * as scoreJson from "./score.json"
     });
     scene.onAfterRenderingGroupObservable.add((groupInfo) => {
         switch (groupInfo.renderingGroupId) {
-            // case 0:
             case 3:
                 scene.clipPlane = null;
         }
@@ -324,7 +321,7 @@ import * as scoreJson from "./score.json"
             return;
         }
 
-        // // TODO: Add logic to keep frame from overlapping with floor, ceiling or another wall.
+        // TODO: Add logic to keep frame from overlapping with floor, ceiling or another wall.
 
         if (useWebXR) {
             frameTransform.scaling.setAll(1);
@@ -367,11 +364,6 @@ import * as scoreJson from "./score.json"
         }
     }
 
-    if (!useWebXR) {
-        const wall = planeMeshes[2];
-        onPick(wall, wall.position, false);
-    }
-
     if (useWebXR) {
         scene.onPointerObservable.add((pointerInfo) => {
             switch (pointerInfo.type) {
@@ -389,8 +381,32 @@ import * as scoreJson from "./score.json"
             }
         });
     }
+    else {
+        const wall = planeMeshes[2];
+        onPick(wall, wall.position, false);
+    }
 
     //#endregion
+
+    //#region Audio playback
+
+    const audio = new Sound(`audio`, `audio.mp3`, scene, () => {
+        audioReady = true;
+        if (audioPlayWhenReady) {
+            Engine.audioEngine.audioContext.resume();
+            audio.play();
+        }
+    }, {
+        autoplay: false,
+        streaming: true
+    });
+    Engine.audioEngine.onAudioUnlockedObservable.add(() => {
+        audio.play();
+    });
+
+    //#endregion
+
+    //#region Keyboard and score meshes
 
     const noteMeshes = [];
 
@@ -398,7 +414,6 @@ import * as scoreJson from "./score.json"
     pianoKeys.parent = frameTransform;
 
     const scoreNotes = scoreJson.score;
-
 
     const createNoteMesh = (onTime: number, duration: number, angle: number): Mesh[] => {
         const mesh = MeshBuilder.CreateLathe(`noteMesh`, {
@@ -437,31 +452,23 @@ import * as scoreJson from "./score.json"
     scoreMeshInFrame.parent = scoreMeshTransform;
     scoreMeshInFrame.rotation.y = -Math.PI / 2;
     scoreMeshInFrame.createNormals(false);
+
     const scoreMaterial = new StandardMaterial(`scoreMaterial`);
     scoreMaterial.diffuseColor.set(1, 0.75, 0.75);
     scoreMaterial.specularColor.set(1, 1, 1);
     scoreMaterial.specularPower = 10;
     scoreMaterial.ambientColor.set(1, 0, 0);
     scoreMaterial.roughness = 10;
+
     scoreMeshInFrame.material = scoreMaterial;
 
     const scoreMeshOutOfFrame = scoreMeshInFrame.clone(`scoreMeshOutOfFrame`);
     scoreMeshOutOfFrame.parent = scoreMeshTransform;
     scoreMeshOutOfFrame.renderingGroupId = 3;
 
-    const audio = new Sound(`audio`, `audio.mp3`, scene, () => {
-        audioReady = true;
-        if (audioPlayWhenReady) {
-            Engine.audioEngine.audioContext.resume();
-            audio.play();
-        }
-    }, {
-        autoplay: false,
-        streaming: true
-    });
-    Engine.audioEngine.onAudioUnlockedObservable.add(() => {
-        audio.play();
-    })
+    //#endregion
+
+    //#region Keyboard and score animations
 
     let noteOnIndex = 0;
     let previousTime = 0;
@@ -484,6 +491,10 @@ import * as scoreJson from "./score.json"
         }
     });
 
+    //#endregion
+
+    //#region Description placard
+
     const descriptionMesh = MeshBuilder.CreatePlane(`descriptionMesh`, { width: 1, height: 0.25 });
     descriptionMesh.position.x = -0.9;
     descriptionMesh.rotation.x = -Math.PI / 2;
@@ -492,28 +503,34 @@ import * as scoreJson from "./score.json"
     const descriptionMaterial = new StandardMaterial(`descriptionMaterial`);
     descriptionMesh.material = descriptionMaterial;
     {
-        const font = "bold 12px arial";
-
         const text1 = "Chopin's Étude Opus 25 No. 11, “Winter Wind” in A Minor";
         const text2 = "MIDI file by Bernd Krueger (CC BY-SA 3.0 DE)";
         const text3 = "Visualization by Andy Fillebrown.";
      
-        const descriptionTexture = new DynamicTexture(`Description texture`, { width:512, height:128}, scene);
+        const fontSize = 12;
+        const fontFamily = `arial`;
+
+        const textureWidth = 512;
+        const textureHeight = 128;
+        const descriptionTexture = new DynamicTexture(`descriptionTexture`, { width: textureWidth, height: textureHeight});
         descriptionMaterial.diffuseTexture = descriptionTexture;
 
         const ctx = descriptionTexture.getContext();
-        ctx.font = font;
+
+        ctx.font = `bold ${fontSize}px ${fontFamily}`;
         const textWidth = ctx.measureText(text1).width;
-        const ratio = textWidth / 12; // font size px
-        const actualFontSize = Math.floor(448 / (ratio * 1)); // 512 == texture width, 448 == texture width with room for padding.
+        const actualFontSize = Math.floor((textureWidth - 64) / (textWidth / fontSize));
+
         ctx.fillStyle = `#fff`;
-        ctx.fillRect(0, 0, 512, 128);
+        ctx.fillRect(0, 0, textureWidth, textureHeight);
         ctx.fillStyle = `#000`;
-        ctx.font = `bold ${actualFontSize}px arial`;
+        ctx.font = `bold ${actualFontSize}px ${fontFamily}`;
         ctx.fillText(text1, 16, 32);
-        ctx.font = `${actualFontSize}px arial`;
+
+        ctx.font = `${actualFontSize}px ${fontFamily}`;
         ctx.fillText(text2, 16, 72);
         ctx.fillText(text3, 16, 104);
+
         descriptionTexture.update();
     }
 })();
