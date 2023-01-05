@@ -127,8 +127,7 @@ import * as scoreJson from "./score.json"
             planeMeshMap.set(mesh, planeContext);
 
             const material = new StandardMaterial("Wall.material", scene);
-            material.alpha = 0.5;
-            material.emissiveColor = Color3.Random();
+            material.alpha = 0;
             mesh.createNormals(false);
             mesh.material = material;
 
